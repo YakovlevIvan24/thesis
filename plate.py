@@ -20,10 +20,10 @@ print(f"Using {PETSc.ScalarType}.")
 
 
 
-# 2d
-gdim = 2
+# 3d
+gdim = 3
 
-msh, ct, ft = gmshio.read_from_msh("new_mesh_2d.msh",MPI.COMM_WORLD,gdim=gdim)
+msh, ct, ft = gmshio.read_from_msh("new_mesh1.msh",MPI.COMM_WORLD,gdim=gdim)
 # boundary_facets = mesh.exterior_facet_indices(msh.topology)
 # 2d
 print(f'ct = {ct}, ft = {ft}')
@@ -69,10 +69,10 @@ D66 = D0*(1-nu)/2
 D12 = D0*nu
 D16 = 0
 D26 = 0
-# D = ufl.as_matrix([[[[D11,1/2*D16,0],[D16,1/2*D26,0],[0,0,0]],[[1/2*D16,D12,0],[1/2*D26,D66,0],[0,0,0]],
-#                         [[0,0,0],[0,0,0],[0,0,0]]],[[[D16,1/2*D26,0],[D12,1/2*D26,0],[0,0,0]],
-#                         [[1/2*D26,D66,0],[1/2*D26,D22,0],[0,0,0]],[[0,0,0],[0,0,0],[0,0,0]]],
-#                         [[[0,0,0],[0,0,0],[0,0,0]],[[0,0,0],[0,0,0],[0,0,0]],[[0,0,0],[0,0,0],[0,0,0]]]])
+D_3d_real = ufl.as_matrix([[[[D11,1/2*D16,0],[D16,1/2*D26,0],[0,0,0]],[[1/2*D16,D12,0],[1/2*D26,D66,0],[0,0,0]],
+                        [[0,0,0],[0,0,0],[0,0,0]]],[[[D16,1/2*D26,0],[D12,1/2*D26,0],[0,0,0]],
+                        [[1/2*D26,D66,0],[1/2*D26,D22,0],[0,0,0]],[[0,0,0],[0,0,0],[0,0,0]]],
+                        [[[0,0,0],[0,0,0],[0,0,0]],[[0,0,0],[0,0,0],[0,0,0]],[[0,0,0],[0,0,0],[0,0,0]]]])
 
 D_2d_real = (ufl.as_matrix
     (
@@ -85,8 +85,9 @@ D_2d_real = (ufl.as_matrix
     ))
 
 # D_2d = D_2d_real*(1 + 1j*beta)
-D_2d = D_2d_real
+# D_2d = D_2d_real
 
+D = D_3d_real
 u = ufl.TrialFunction(V)
 v = ufl.TestFunction(V)
 
@@ -105,7 +106,7 @@ for i in range(len(freqs)):
     # Билинейная форма
     a = 2*e*(-rho * omega ** 2 * ( (ufl.inner(u, v) ) \
                 + 1 / 3 * e ** 2 * ufl.inner(grad(u)[0,:], grad(v)[0,:]) ) \
-              - 1/(2*e)*ufl.inner(D_2d,ufl.outer(grad(grad(u)[0,:]),grad(grad(v)[0,:]))))*ufl.dx
+              - 1/(2*e)*ufl.inner(D,ufl.outer(grad(grad(u)[0,:]),grad(grad(v)[0,:]))))*ufl.dx
     # Линейная форма
     L = ufl.inner(f,v[0])*ufl.dx
 
