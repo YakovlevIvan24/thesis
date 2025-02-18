@@ -13,6 +13,7 @@
 \usepackage{adjustbox}
 \usepackage{soul}
 \usepackage{listings}
+\usepackage{stackengine}
 \graphicspath{{C:\Users\123\Desktop}}
 \begin{titlepage}
 	\centering
@@ -49,6 +50,7 @@
 \begin{equation}
     \partial \Omega = \text{Г}_{\text{с}} \cup \text{Г}_{\text{f}}
 \end{equation}
+\textcolor{red}{Это неправда в 3D: граница $\ne \partial\Omega$ }
 где $\text{Г}_{\text{с}}$ - закрепленный конец, $\text{Г}_f$ - свободный конец
 \begin{figure}[H]
 	\begin{center}
@@ -229,6 +231,11 @@ grad(grad(v)[0,:]))))*ufl.dx
 L = ufl.inner(f,v[0])*ufl.dx
 \end{lstlisting}
 
+Пояснение: 
+\begin{equation}
+    \mathcal{D} : \nabla \otimes  \nabla \otimes u : \nabla \otimes \nabla \otimes \nu =\mathcal{D} \Shortstack{. . . .} \nabla \otimes \nabla \otimes u \otimes \nabla \otimes \nabla \otimes \nu 
+\end{equation}
+где $ \nabla \otimes f$ - градиент тензорного поля f (при верстке формул соблюдался стиль исходной статьи, но в рамках тензорной алгебры мне так удобнее)
 \begin{figure}[H]
 	\begin{center}
 		\includegraphics[width = 0.7\textwidth]{afc_P3_D2.find.png}
@@ -253,5 +260,10 @@ L = ufl.inner(f,v[0])*ufl.dx
 
 \textcolor{red}{Продолжение следует... Я пока попытаюсь починить ГУ}
 
+\par
+\textcolor{red}{Идеи:
+1. Попробовать базисное простанство H(div) H(curl)
+2. Попробовать кастомные элементы через basix.ufl, попробовать интерполяцию (https://fenicsproject.discourse.group/t/gradients-and-divergences-in-fenicsx/9911)
+3. Добавить метки на границы чтобы интегрировать не по всей границе, а по Гf и Гc}
 
 \end{document}
