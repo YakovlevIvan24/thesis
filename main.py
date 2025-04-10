@@ -11,7 +11,7 @@ gmsh.open('new_mesh_tet_only.msh')
 node_tags, node_coords, _ = gmsh.model.mesh.getNodes()
 node_tags -=1
 node_tags = node_tags.astype(int)
-
+# print(node_tags)
 msh = None
 class Mesh:
     def __init__(self,cells,points,points_tags):
@@ -21,7 +21,8 @@ class Mesh:
 
 
 points = np.reshape(np.split(node_coords,len(node_coords)//3), (len(node_coords)//3,3))
-
+# cells = np.reshape(np.array_split(node_tags,len(node_tags)//4),(len(node_tags)//4,4))
+# print(node_coords)
 
 elementType = 4  # 4 = tetrahedron
 elementTags, nodeTags = gmsh.model.mesh.getElementsByType(elementType)
@@ -39,20 +40,22 @@ nu = E/2/G-1
 grid = generate_from_gmsh_mesh(msh,1e3,D=None,E=E,nu=nu)
 
 grid.ready()
-
 u_D = grid.get_Dirichlet_nodes()
-
+print(f'u_D = {u_D}')
 grid.apply_Dirichlet_boundary(u_D, np.full([3*u_D.shape[0],1],1))
+
 
 for i in range(grid.M.shape[0]):
     for j in range(i+1,grid.M.shape[0]):
         if np.array_equal(grid.M[i,:],grid.M[j,:]):
             print(f'row {i} = row {j}')
 
+
 omega = 100
 
+# Почему-то не симметричная
+# assert np.allclose(grid.H[:,:], grid.H[:,:].T, rtol=1e-5, atol=1e-8)
 A = grid.H - omega**2 * grid.M
 u = la.solve(A,grid.F)
 
 print(u)
-

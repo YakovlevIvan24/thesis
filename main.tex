@@ -17,8 +17,9 @@
 % \usepackage{bbold}
 % \usepackage{dsfont}
 % \usepackage{amsfonts}
-
+\setcounter{MaxMatrixCols}{15}
 \graphicspath{{C:\Users\123\Desktop}}
+\begin{document}
 \begin{titlepage}
 	\centering
 	\vspace{5cm}
@@ -48,12 +49,10 @@
 	Долгопрудный, 2021 г.
 \end{titlepage}
 
-\begin{document}
 
 \section{Постановка задачи}
 \textcolor{red}{todo:
-1. Дописать теорию - показать как градиент от $[N]_i$ выражается через $b_i, c_i d_i$, Выписать выражения для интегралов по тетраэдру в матрице масс.
-2. Написать объяснения преобразований тензоров} \par
+1. Написать объяснения преобразований тензоров} \par
 Есть пластина, она занимает объем $\overline{\Omega} \times [-\frac{1}{2}h, \frac{1}{2}h] \subset \mathbb{R}^3$, h - толщина пластины. $\Omega$ - срединная плоскость. Граница пластины состоит из двух частей:
 \begin{equation}
     \partial \Omega = \text{Г}_{\text{с}} \cup \text{Г}_{\text{f}}
@@ -79,7 +78,7 @@
     \label{fig:enter-label}
 \end{figure}
 \textcolor{red}{Как это перенести для этого векторного уравнения - мне не очевидно, поэтому я вывел уравнения в тензорном виде} \par
-где $\nabla \cdot$ - дивергенция ($\nabla \otimes $ - градиент), $\rho$ - плотность материала, $\overline{Q}$ - внешняя нагрузка, $\textbf{C}$ - тензор уругих модулей: \textcolor{red}{Не уверен, что это верно}
+где $\nabla \cdot$ - дивергенция ($\nabla \otimes $ - градиент), $\rho$ - плотность материала, $\overline{Q}$ - внешняя нагрузка, $\textbf{C}$ - тензор уругих модулей: \textcolor{red}{Не уверен, что он верно записан}
 \begin{equation}
 \textbf{C} = \Lambda
 \begin{pmatrix}
@@ -99,6 +98,7 @@
 \begin{equation}
     \textbf{e} = \frac{1}{2}(\nabla \otimes \overline{u} + \nabla \otimes \overline{u}^T)
 \end{equation}
+\section{Метод}
 Задачу можно свести к задаче о минимизации функционала:
 
 % \begin{center}
@@ -122,7 +122,7 @@
 \begin{equation}
     f = \frac{1}{2}\textbf{C}:\nabla \otimes \overline{u} : \nabla \otimes \overline{u}^T - \overline{Q}\cdot \overline{u}
 \end{equation}
-\textcolor{red}{Я не слишком глубоко проникся тензорным анализом (возникают два вопроса: 1. $\partial \leftrightarrow d$. 2. что с константой интегрирования), поэтому выше, ориентируясь на Зинкевича и интуицию, я машу руками}
+\textcolor{red}{Я не слишком глубоко проникся тензорным анализом (возникают два вопроса: 1. $\partial \leftrightarrow d$. 2. что с константой интегрирования), поэтому выше, ориентируясь на Зинкевича я выписываю интуитивно ожидаемый результат}
 Рассмотрим тетраэдральный элемент. Поле перемещений аппроксимируем линейной функцией координат:
 \begin{equation}
     \overline{u} = \alpha_1 + \alpha_2 x + \alpha_3 y + \alpha_4 z 
@@ -176,7 +176,7 @@ x_p & y_p & 1 \\
 \begin{equation}
     \overline{u} = [\mathbb{I} N_i,\mathbb{I} N_j,\mathbb{I} N_m,\mathbb{I} N_p] \cdot \overline{u}^e = [\textbf{N}] \overline{u}^e
 \end{equation}
-где $N_i = \frac{a_i + b_ix + c_i y + d_i z}{6V}, \mathbb{I} - $ единичная матрица. \par
+где $N_i = \frac{a_i + b_i x + c_i y + d_i z}{6V}, \mathbb{I} - $ единичная матрица, $\overline{u}^e = (u_1, v_1,\omega_1, u_2, v_2,  \omega_2 ...\omega_4) $ - вектор размера (12,1) неизвестных перемещений для элемента. \par
 Рассмотрим данный функционал на элементе e: $\chi \rightarrow \chi^e$:
 
 \begin{figure}[H]
@@ -190,44 +190,45 @@ x_p & y_p & 1 \\
 
  
 \begin{align}
-\nabla_{\overline{u}_i} \otimes \chi^e = \int_{V^e} \frac{1}{2} \Bigg( \nabla_{\overline{u}_i} \otimes  \nabla \otimes \overline{u} : (\nabla \otimes \overline{u}^T:\textbf{C}) + (\nabla_{\overline{u}_i} \otimes  \nabla \otimes \overline{u})^T : (\textbf{C}:\nabla \otimes \overline{u}) \Bigg) dV - \\ - \nabla_{\overline{u}_i} \otimes\overline{u} \cdot \overline{Q}
+\nabla_{\overline{u}_i} \otimes \chi^e = \int_{V^e} \Bigg(\frac{1}{2} \nabla_{\overline{u}_i} \otimes  \nabla \otimes \overline{u} : (\nabla \otimes \overline{u}^T:\textbf{C}) + (\nabla_{\overline{u}_i} \otimes  \nabla \otimes \overline{u})^T : (\textbf{C}:\nabla \otimes \overline{u})  - \\ - \nabla_{\overline{u}_i} \otimes\overline{u} \cdot \overline{Q}\Bigg) dV
 \end{align}
 Учтем, что 
 \begin{equation}
 \begin{split}
-    \nabla \otimes \overline{u} = \nabla \otimes [\textbf{N}] \cdot \overline{u}^e, \\
-    \nabla_{\overline{u}_i} \otimes \nabla \otimes \overline{u}  = \nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u}_i} \otimes \overline{u}^e)^T
+    \nabla \otimes \overline{u} = (\nabla \otimes [\textbf{N}]) \cdot \overline{u}^e, \\
+    \nabla_{\overline{u}_i} \otimes \nabla \otimes \overline{u}  = (\nabla \otimes [\textbf{N}]) \cdot (\nabla_{\overline{u}_i} \otimes \overline{u}^e)^T
 \end{split}
 \end{equation}
 
 Тогда (15) можно записать как
 \begin{equation}
     \begin{split}
-        \nabla_{\overline{u}_i} \otimes \chi^e = \frac{1}{2} \int_{V^e} \Bigg( \nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T:((\nabla \otimes[\textbf{N}] \cdot \overline{u}^e)^T :\textbf{C}) + \\
-        + (\nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T)^T:\textbf{C}:\nabla \otimes [\textbf{N}] \cdot \overline{u}^e \Bigg) \space dV - \nabla_{\overline{u}_i} \otimes\overline{u} \cdot \overline{Q} = \\
-        = \frac{1}{2}\int_{V^e} \Bigg( \nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T:((\nabla \otimes[\textbf{N}])^T:\textbf{C})^T + \\ 
-        +(\nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T)^T:\textbf{C}:\nabla \otimes [\textbf{N}] \cdot  \Bigg) \overline{u}^e dV - \nabla_{\overline{u}_i} \otimes\overline{u} \cdot \overline{Q}
+        \nabla_{\overline{u}_i} \otimes \chi^e   =  \int_{V^e} \Bigg(\frac{1}{2} \nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T:((\nabla \otimes[\textbf{N}] \cdot \overline{u}^e)^T :\textbf{C}) + \\
+        + \frac{1}{2} (\nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T)^T:\textbf{C}:\nabla \otimes [\textbf{N}] \cdot \overline{u}^e - \nabla_{\overline{u}_i} \otimes\overline{u} \cdot \overline{Q}\Bigg) \space dV = \\
+        =\int_{V^e} \Bigg( \bigg\{  \frac{1}{2}\nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T:((\nabla \otimes[\textbf{N}])^T:\textbf{C})^T + \\ 
+        +(\nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T)^T:\textbf{C}:\nabla \otimes [\textbf{N}] \bigg\} \cdot   \overline{u}^e  - \nabla_{\overline{u}_i} \otimes\overline{u} \cdot \overline{Q} \Bigg)dV
     \end{split}
 \end{equation}
 
 Рассмотрим это выражение для узла j:
 \begin{equation}
     \begin{split}
-        \nabla_{\overline{u}_i} \otimes \chi^e_j = \frac{1}{2}\int_{V^e} \Bigg( \nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T:((\nabla \otimes[\textbf{N}]_j)^T:\textbf{C})^T + \\ 
-        +(\nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T)^T:\textbf{C}:\nabla \otimes [\textbf{N}]_j \cdot  \Bigg)\overline{u}^e_j \space dV - \nabla_{\overline{u}_i} \otimes\overline{u}_j \cdot \overline{Q}_j
+        \nabla_{\overline{u}_i} \otimes \chi^e_j = \int_{V^e} \Bigg(\frac{1}{2}\bigg\{ \nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T:((\nabla \otimes[\textbf{N}]_j)^T:\textbf{C})^T + \\ 
+        +(\nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T)^T:\textbf{C}:\nabla \otimes [\textbf{N}]_j \cdot \bigg\} \overline{u}^e_j  - \nabla_{\overline{u}_i} \otimes\overline{u}_j \cdot \overline{Q}_j \Bigg)\space dV
     \end{split}
 \end{equation}
-Выражение в больших скобках - матрица 3x3. Тогда для всего элемента
+Выражение в фигурных скобках - \textbf{матрица 3x3}. \textcolor{red}{Здесь, возможно, не очевидный момент - i,j = {1,2,3,4} - нумеруют узел в тетраэдральном элементе, это никак не связано с тем, что в скобках матрица. Дело в том, что $\overline{u}$ - 3x1 вектор, поэтому связь между i-м и j-м узлами теперь задается матрицей 3x3. Поэтому в разделе пояснений к коду, (и пояснений к преобразованиям тензоров, (когда они появятся) )при переходе к индексной записи тензоров я использую греческие буквы, чтобы они не пересекались с i и j}
+Тогда для всего элемента
 \begin{equation}
     \nabla_{\overline{u}_i} \otimes \chi^e_j = h^e \cdot \overline{u}^e + \overline{F}^e
 \end{equation},
 где
 \begin{equation}
-    h_{ij}^e = \frac{1}{2}\int_{V^e} \Bigg( \nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T:((\nabla \otimes[\textbf{N}]_j)^T:\textbf{C})^T + \\ 
-        +(\nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T)^T:\textbf{C}:\nabla \otimes [\textbf{N}]_j \Bigg) dV
+    h_{ij}^e = \frac{1}{2}\int_{V^e} \Bigg\{ \nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T:((\nabla \otimes[\textbf{N}]_j)^T:\textbf{C})^T + \\ 
+        (\nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T)^T:\textbf{C}:\nabla \otimes [\textbf{N}]_j \Bigg\} dV
 \end{equation}
 \begin{equation}
-    \overline{F}^e_i = - \nabla_{\overline{u}_i} \otimes\overline{u}_j \cdot \overline{Q}_j
+    \overline{F}^e_i = - \int_{V^e}\nabla_{\overline{u}_i} \otimes\overline{u}_j \cdot \overline{Q}_j
 \end{equation}
 
 Минимизирующая система для всех элементов:
@@ -242,19 +243,102 @@ x_p & y_p & 1 \\
 
 
 Аналогично получается матрица масс для первого слагаемого в уравнении (2):
+\textcolor{red}{Ее я не выводил руками, а написал по аналогии}
 \begin{equation}
-    M_{ij}^e = \int_{V^e} [\textbf{N}]^T \rho [\textbf{N}] dV
+    M_{ij}^e = \int_{V^e} [\textbf{N}]_i^T \rho [\textbf{N}]_j dV
 \end{equation}
 
 Тогда итоговое уравнение выглядит следующим образом:
 \begin{equation}
     [H]\overline{u} + [M] \ddot{\overline{u}} + \overline{F} = 0
 \end{equation}
+\section{Пояснения к коду plate3d.py}
+Вернемся к страшной формуле для $h_{ij}$ чтобы показать как она выражается в коде. 
+\begin{align}
+& \nabla \otimes [\textbf{N}]_{0\alpha \beta} = \frac{\partial}{\partial x}
+\begin{pmatrix}
+N_1 & 0 & 0 & N_2 & 0 & 0 & N_3 & 0 & 0 & N_4 & 0 & 0 \\
+0 & N_1 & 0 & 0 & N_2 & 0 & 0 & N_3 & 0 & 0 & N_4 & 0 \\
+0 & 0 & N_1 & 0 & 0 & N_2 & 0 & 0 & N_3 & 0 & 0 & N_4
+\end{pmatrix} = \\
+&=\begin{pmatrix}
+b_1 & 0   & 0   & b_2 & 0   & 0   & b_3 & 0   & 0   & b_4 & 0   & 0 \\
+0   & b_1 & 0   & 0   & b_2 & 0   & 0   & b_3 & 0   & 0   & b_4 & 0 \\
+0   & 0   & b_1 & 0   & 0   & b_2 & 0   & 0   & b_3 & 0   & 0   & b_4\\
+\end{pmatrix}
+\end{align}
+Для $\nabla \otimes [\textbf{N}]_{1\alpha \beta}$ и $\nabla \otimes [\textbf{N}]_{2\alpha \beta}$ соответственно $\frac{\partial}{\partial y}$ и $\frac{\partial}{\partial z}$, в матрице $c_i$ и $d_i $. 
+\begin{align}
+& \nabla_{\overline{u_i}} \otimes \overline{u}^e =\begin{pmatrix}
+    \frac{\partial}{\partial u_i} u_1 & \frac{\partial}{\partial u_i} v_1 & \frac{\partial}{\partial u_i} \omega_1 &\frac{\partial}{\partial u_i} u_2 & \frac{\partial}{\partial u_i} v_2 & \frac{\partial}{\partial u_i} \omega_2 &\frac{\partial}{\partial u_i} u_3 & \frac{\partial}{\partial u_i} v_3 & \frac{\partial}{\partial u_i} \omega_3 &\frac{\partial}{\partial u_i} u_4 & \frac{\partial}{\partial u_i} v_4 & \frac{\partial}{\partial u_i} \omega_4 \\
+    \frac{\partial}{\partial v_i} u_1 & \frac{\partial}{\partial v_i} v_1 & \frac{\partial}{\partial v_i} \omega_1 &\frac{\partial}{\partial v_i} u_2 & \frac{\partial}{\partial v_i} v_2 & \frac{\partial}{\partial v_i} \omega_2 &\frac{\partial}{\partial v_i} u_3 & \frac{\partial}{\partial v_i} v_3 & \frac{\partial}{\partial v_i} \omega_3 &\frac{\partial}{\partial v_i} u_4 & \frac{\partial}{\partial v_i} v_4 & \frac{\partial}{\partial v_i} \omega_4 \\
+    \frac{\partial}{\partial \omega_i} u_1 & \frac{\partial}{\partial \omega_i} v_1 & \frac{\partial}{\partial \omega_i} \omega_1 &\frac{\partial}{\partial \omega_i} u_2 & \frac{\partial}{\partial \omega_i} v_2 & \frac{\partial}{\partial \omega_i} \omega_2 &\frac{\partial}{\partial \omega_i} u_3 & \frac{\partial}{\partial \omega_i} v_3 & \frac{\partial}{\partial \omega_i} \omega_3 &\frac{\partial}{\partial \omega_i} u_4 & \frac{\partial}{\partial \omega_i} v_4 & \frac{\partial}{\partial \omega_i} \omega_4\\
+    \end{pmatrix}^T \\
+    = &[0,...\mathbb{I}_i,..0]
+\end{align}
+    
 
-Ищем собственные значения:
+
+Поэтому удобнее их воспринимать вместе:
 \begin{equation}
-    u(x,y,z,t) = u(x,y,z)\cdot e^{i\omega t}
+    \nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T = \nabla \otimes [\textbf{N}]_{\alpha \beta\gamma} \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T_{\gamma \zeta} = \textbf{B}_{\alpha \beta \zeta}
 \end{equation}
+\textcolor{red}{Здесь сидит индекс i - т.к. эта матрица это расписанный $\nabla_{\overline{u}_i} \otimes  \nabla \otimes \overline{u}$}
+\begin{equation}
+    \textbf{B}_{0\beta \zeta} = 
+\begin{pmatrix}
+b_i & 0   & 0   \\
+0   & b_i & 0   \\
+0   & 0   & b_i \\
+\end{pmatrix},  \textbf{B}_{1\beta \zeta} = 
+\begin{pmatrix}
+c_i & 0   & 0   \\
+0   & c_i & 0   \\
+0   & 0   & c_i \\
+\end{pmatrix}, \textbf{B}_{2\beta\zeta} = 
+\begin{pmatrix}
+d_i & 0   & 0   \\
+0   & d_i & 0   \\
+0   & 0   & d_i \\
+\end{pmatrix}
+\end{equation}
+Аналогично для 
+\begin{equation}
+    (\nabla \otimes[\textbf{N}]_j)_{\alpha \beta \gamma}^T:\textbf{C}_{\beta \gamma \phi \zeta}) = \textbf{A}_{\alpha \phi \zeta}
+\end{equation}
+\textcolor{red}{ Здесь сидит индекс j т.к мы рассмотрели крокодила (15) на узле j}
+Для матрицы масс: \par
+\begin{align}
+    & N_i N_j= \frac{a_i + b_i x + c_i y + d_i z}{6V} \cdot  \frac{a_j + b_j x + c_j y + d_j z}{6V} = \\
+    &\frac{a_i + b_i (x_b + \tilde{x}) + c_i (y_b + \tilde{y}) + d_i (z_b + \tilde{z})}{6V} \cdot  \frac{a_j + b_j (x_b + \tilde{x}) + c_j (y_b + \tilde{y}) + d_j (z_b + \tilde{z})}{6V}
+\end{align}
+где $x_b,y_b,z_b$ -координаты барицентра
+В системе барицентра
+\begin{equation}
+    \int dxdydz = V = \frac{1}{6}     \begin{vmatrix}
+1 & x_i & y_i & z_i \\ 
+1 & x_j & y_j & z_j \\ 
+1 & x_m & y_m & z_m \\ 
+1 & x_p & y_p & z_p \\
+    \end{vmatrix} 
+\end{equation}
+\textcolor{red}{В этот момент понял, что возможно ошибся в коэффициентах при вычислении матрицы масс}
+
+\begin{equation}
+    \int xdxdydz = \int ydxdydz = 0 
+\end{equation}
+\begin{equation}
+    \int x^2 dxdydz =  \frac{V}{10} (\sum_i x^2_i + \sum_{ij, i<j} x_i x_j) 
+\end{equation}
+\begin{equation}
+    \int xy \space dxdydz =  \frac{V}{20} (\sum_i x_i y_i + \sum_{ij, i<j}( x_i y_j + x_j y_i)) 
+\end{equation}
+\textcolor{red}{Формулы выше расходятся с Зинкевичем из-за перекрестных слагаемых, deepseek утверждает что у Зинкевича формулы для интегрирования по равностороннему треугольнику, я ему верю, закодить эти формулы мне показалось легче, чем закодить преобразование треугольника}
+to be continued
+% Ищем собственные значения:
+% \begin{equation}
+%     u(x,y,z,t) = u(x,y,z)\cdot e^{i\omega t}
+% \end{equation}
 
 
 \begin{lstlisting}

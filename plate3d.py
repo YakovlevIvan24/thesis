@@ -187,23 +187,17 @@ class Grid:
 
                 return sum_sq + sum_cross
 
-            coords_i = [1, x[0], y[0], z[0]]
+            coords_0 = [1, x[0], y[0], z[0]]
+            coords = [x,y,z]
             coef_i = [a_i, b_i, c_i ,d_i]
             coef_j = [a_j, b_j, c_j, d_j]
-            xx = np.sum(x**2) + np.triu(x[:,None]-x).sum()
-            yy = np.sum(y ** 2) + np.triu(y[:, None] - y).sum()
-            zz = np.sum(z ** 2) + np.triu(z[:, None] - z).sum()
-            xy = tetrahedral_bracket_sum(x,y)
-            xz = tetrahedral_bracket_sum(x, z)
-            yx = tetrahedral_bracket_sum(y, x)
-            yz = tetrahedral_bracket_sum(y, z)
-            zx = tetrahedral_bracket_sum(z,x)
-            zy = tetrahedral_bracket_sum(z,y)
-
-            m_ij = 1/36 / elem.V * (
-                np.sum([coef_i[i]*coords_i[i] for i in range(len(coef_i))]) + np.sum([coef_j[i]*coords_i[i] for i in range(len(coef_j))])
-                + b_i*b_j/10*xx + b_i*c_j/20*xy + b_i*d_j/20*xz + c_i*c_j/10*yy + c_i*b_j/20*yx + c_i*d_j/20*yz + d_i*b_j/20*zx + d_i*c_j/20*zy + d_i*d_j/20*zz #TODO переписать это...
-                                     )
+            #todo переписать и проверить коэффициенты
+            cross_sum = np.array([tetrahedral_bracket_sum(i, j) if not np.array_equal(i, j) else 0 for i in coords for j in coords])
+            cross_coeff = np.array([i*j for i in coef_i[1:] for j in coef_j[1:]])
+            cross_sum = np.sum(np.multiply(cross_sum,cross_coeff))
+            direct_sum = np.sum([np.sum(i**2) + np.triu(i[:,None]-i).sum() for i in coords])
+            zero_sum = np.sum([coef_i[i]*coords_0[i] for i in range(len(coef_i))]) + np.sum([coef_j[i]*coords_0[i] for i in range(len(coef_j))])
+            m_ij = 1/36 / elem.V * (zero_sum + direct_sum + cross_sum)
             m_e[3*i:3*(i+1),3*j:3*(j+1)] = np.eye(3)*m_ij
         return m_e
 
@@ -319,7 +313,6 @@ def generate_from_points_and_triangles(node_tags,points:np.ndarray, tetrahedrons
     res.y_0 += points[:, 1]
     res.z_0 += points[:, 2]
 
-    print('УБЕРИ NODE_TAGS')
     for tetrahedron in tetrahedrons:
         tetrahedron = list(map(int, tetrahedron))
 
