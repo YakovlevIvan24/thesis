@@ -51,8 +51,7 @@
 
 
 \section{Постановка задачи}
-\textcolor{red}{todo:
-1. Написать объяснения преобразований тензоров} \par
+
 Есть пластина, она занимает объем $\overline{\Omega} \times [-\frac{1}{2}h, \frac{1}{2}h] \subset \mathbb{R}^3$, h - толщина пластины. $\Omega$ - срединная плоскость. Граница пластины состоит из двух частей:
 \begin{equation}
     \partial \Omega = \text{Г}_{\text{с}} \cup \text{Г}_{\text{f}}
@@ -185,36 +184,73 @@ x_p & y_p & 1 \\
     \caption{Тетраэдральный элемент}
     \label{fig:enter-label}
 \end{figure}
-
-И возьмем производную по $\overline{u}_i$ - вектору перемещения в узле i:
-
- 
-\begin{align}
-\nabla_{\overline{u}_i} \otimes \chi^e = \int_{V^e} \Bigg(\frac{1}{2} \nabla_{\overline{u}_i} \otimes  \nabla \otimes \overline{u} : (\nabla \otimes \overline{u}^T:\textbf{C}) + (\nabla_{\overline{u}_i} \otimes  \nabla \otimes \overline{u})^T : (\textbf{C}:\nabla \otimes \overline{u})  - \\ - \nabla_{\overline{u}_i} \otimes\overline{u} \cdot \overline{Q}\Bigg) dV
-\end{align}
+\textbf{Заметка на полях:}
+\begin{equation}
+    \nabla \otimes \overline{u}  = \nabla \otimes \overline{u}_{\alpha \beta}= \frac{\partial u_\alpha}{\partial x_\beta}  
+\end{equation}
+\begin{equation}
+    \nabla \otimes \nabla \otimes \overline{u}  = \nabla \otimes \overline{u}_{\alpha \beta \gamma}= \frac{\partial}{\partial x_\gamma} \frac{\partial u_\alpha}{\partial x_\beta}
+\end{equation}
+Эти две "формулы" показывают куда и в каком порядке расставлять индексы. \textcolor{red}{Я не до конца уверен, что последняя формула верна.}
+% \begin{equation}
+%     \space \mathbb{A} = \mathbb{A}_{\alpha \beta \gamma} \rightarrow \mathbb{A}^T = \mathbb{A}_{\gamma \beta \alpha}
+% \end{equation}
+% Эта "формула" показывает как меняются индексы при транспонировании тензора третьего ранга. \textcolor{red}{ Насколько я знаю, вместо ужасного "транспонирования тензора третьего ранга" нужно вводить изомеры, но поскольку эти выкладки проделываются для понимания того что нужно закодить я оставлю пока это в таком состоянии. Я не уверен, что эта формула верна с математической точки зрения, но я проверял что так работает транспонирование для numpy array.}
+% \textbf{Если хотя бы одна из "формул" 15 - 17 не верна то все ниже тоже не верно} \par
+\par
+Возьмем производную по $\overline{u}_i$ - вектору перемещения в узле i:
+\textcolor{red}{i - номер узла тетраэдра, просто обозначение, никак не соотносится с индексами $\alpha, \beta$ ... Подробнее описано ниже}
+\begin{equation}
+    \begin{split}
+        \nabla_{\overline{u_i}} \otimes( \textbf{C}:\nabla \otimes \overline{u} : \nabla \otimes \overline{u}^T) = \frac{\partial}{\partial \overline{u_i}_\alpha } \textbf{C}_{\beta \gamma \nu \mu} \frac{\partial u_\nu}{\partial x_\mu} (\frac{\partial u_\beta}{\partial x_\gamma})^T = \\ = \textbf{C}_{\beta \gamma \nu \mu} (\frac{\partial}{\partial \overline{u_i}_\alpha } \frac{\partial u_\nu}{\partial x_\mu}) (\frac{\partial u_\beta}{\partial x_\gamma})^T + \textbf{C}_{\beta \gamma \nu \mu} \frac{\partial u_\nu}{\partial x_\mu} (\frac{\partial}{\partial \overline{u_i}_\alpha } (\frac{\partial u_\beta}{\partial x_\gamma})^T) = \\ = (\frac{\partial u_\beta}{\partial x_\gamma})^T \textbf{C}_{\beta \gamma \nu \mu} (\frac{\partial}{\partial \overline{u_i}_\alpha } \frac{\partial u_\nu}{\partial x_\mu}) + \textbf{C}_{\beta \gamma \nu \mu} \frac{\partial u_\nu}{\partial x_\mu} (\frac{\partial}{\partial \overline{u_i}_\alpha } (\frac{\partial u_\beta}{\partial x_\gamma})^T) = \\ = 
+        (\nabla \otimes \overline{u}^T:\textbf{C}) : \nabla_{\overline{u}_i} \otimes  \nabla \otimes \overline{u}  +  (\textbf{C}:\nabla \otimes \overline{u}) : (\nabla_{\overline{u}_i} \otimes  \nabla \otimes \overline{u})^T
+    \end{split}
+\end{equation}
+\textcolor{red}{ В предпоследней строке странная вещь - с точки зрения индексной записи можно поменять в последнем слагаемом умножаемые местами, тогда в последней формуле второй градиент от u будет стоять спереди, но с точки зрения тензорной алгебры я не уверен что двойное скалярное произведение тензоров второго и третьего ранга ассоциативно}
+% (\frac{\partial}{\partial \overline{u_i}_\alpha } (\frac{\partial u_\beta}{\partial x_\gamma})^T) \textbf{C}_{\beta \gamma \nu \mu} \frac{\partial u_\nu}{\partial x_\mu} = \\ = 
+%         (\nabla \otimes \overline{u}^T:\textbf{C}) : \nabla_{\overline{u}_i} \otimes  \nabla \otimes \overline{u}  + (\nabla_{\overline{u}_i} \otimes  \nabla \otimes \overline{u})^T : (\textbf{C}:\nabla \otimes \overline{u})
+\begin{equation}
+\begin{split}
+\nabla_{\overline{u}_i} \otimes \chi^e = \int_{V^e} \Bigg(\frac{1}{2} (\nabla \otimes \overline{u})^T:\textbf{C} : \nabla_{\overline{u}_i} \otimes  \nabla \otimes \overline{u} + \frac{1}{2} \nabla \otimes \overline{u}:\textbf{C}:\nabla_{\overline{u}_i} \otimes  (\nabla \otimes \overline{u})^T  - \\ - \nabla_{\overline{u}_i} \otimes\overline{u} \cdot \overline{Q}\Bigg) dV
+\end{split}
+\end{equation}
 Учтем, что 
 \begin{equation}
 \begin{split}
-    \nabla \otimes \overline{u} = (\nabla \otimes [\textbf{N}]) \cdot \overline{u}^e, \\
-    \nabla_{\overline{u}_i} \otimes \nabla \otimes \overline{u}  = (\nabla \otimes [\textbf{N}]) \cdot (\nabla_{\overline{u}_i} \otimes \overline{u}^e)^T
+% \begin{gathered}
+    &\nabla \otimes \overline{u} = \nabla \otimes ([\textbf{N}] \cdot \overline{u}^e) = \frac{\partial}{\partial x_\alpha}( N_{\beta \gamma} \overline{u}^e_\gamma) = (\frac{\partial}{\partial x_\alpha} N_{\beta \gamma}) \overline{u}^e_\gamma  = \overline{u}^e_\gamma (\frac{\partial}{\partial x_\alpha}N_{\beta \gamma}) = \overline{u}^e  \cdot \nabla \otimes [\textbf{N}]^T, \\
+    &\nabla_{\overline{u}_i} \otimes \nabla \otimes \overline{u}  = \nabla_{\overline{u}_i} \otimes \nabla \otimes ([\textbf{N}] \cdot \overline{u}^e) = \frac{\partial}{\partial \overline{u}_i} (\overline{u}^e_\gamma (\frac{\partial}{\partial x_\alpha} N_{\beta \gamma})) = (\frac{\partial}{\partial \overline{u}_i} \overline{u}^e_\gamma )(\frac{\partial}{\partial x_\alpha} N_{\beta \gamma}) = (\nabla_{\overline{u}_i} \otimes \overline{u}^e)^T \cdot \nabla \otimes [\textbf{N}]^T,   \\
+    &\nabla_{\overline{u}_i} \otimes (\nabla \otimes \overline{u})^T = \nabla_{\overline{u}_i} \otimes (\nabla \otimes [\textbf{N}] \cdot \overline{u}^e)^T = \nabla_{\overline{u}_i} \otimes( \overline{u}^e  \cdot \nabla \otimes [\textbf{N}]^T)^T = \\
+    & = \frac{\partial}{\partial \overline{u}_i} (\overline{u}^e_\gamma (\frac{\partial}{\partial x_\alpha} N_{\beta \gamma}))^T = \frac{\partial}{\partial \overline{u}_i} (\overline{u}^e_\gamma (\frac{\partial}{\partial x_\alpha} N^T_{\gamma \beta})^{(132}) = (\frac{\partial}{\partial \overline{u}_i} \overline{u}^e_\gamma )(\frac{\partial}{\partial x_\alpha} N_{\gamma \beta})^{(132)} 
+% \end{gathered}
 \end{split}
 \end{equation}
-
-Тогда (15) можно записать как
+Выше индекс (132) обозначение изомера тензора третьего ранга. У матрицы, которая соответствует данному тензору, поменяны местами вторая и третья оси.
+Тогда (18) можно записать как
 \begin{equation}
     \begin{split}
-        \nabla_{\overline{u}_i} \otimes \chi^e   =  \int_{V^e} \Bigg(\frac{1}{2} \nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T:((\nabla \otimes[\textbf{N}] \cdot \overline{u}^e)^T :\textbf{C}) + \\
-        + \frac{1}{2} (\nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T)^T:\textbf{C}:\nabla \otimes [\textbf{N}] \cdot \overline{u}^e - \nabla_{\overline{u}_i} \otimes\overline{u} \cdot \overline{Q}\Bigg) \space dV = \\
-        =\int_{V^e} \Bigg( \bigg\{  \frac{1}{2}\nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T:((\nabla \otimes[\textbf{N}])^T:\textbf{C})^T + \\ 
-        +(\nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T)^T:\textbf{C}:\nabla \otimes [\textbf{N}] \bigg\} \cdot   \overline{u}^e  - \nabla_{\overline{u}_i} \otimes\overline{u} \cdot \overline{Q} \Bigg)dV
+        \nabla_{\overline{u}_i} \otimes \chi^e   =  \int_{V^e} \Bigg(\frac{1}{2} (\overline{u}^e \cdot \nabla \otimes[\textbf{N}]^T )^T :\textbf{C}: (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T \cdot \nabla \otimes [\textbf{N}]^T + \\
+        + \frac{1}{2} \overline{u}^e \cdot \nabla \otimes [\textbf{N}]^T:\textbf{C}:(\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T \cdot (\nabla \otimes [\textbf{N}]^T)^{(132)} - \nabla_{\overline{u}_i} \otimes\overline{u} \cdot \overline{Q}\Bigg) \space dV = \\ =
+        \int_{V^e} \Bigg(\frac{1}{2} \overline{u}^e \cdot (\nabla \otimes[\textbf{N}]^T)^{(132)} :\textbf{C}: (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T \cdot \nabla \otimes [\textbf{N}]^T + \\
+        + \frac{1}{2} \overline{u}^e \cdot \nabla \otimes [\textbf{N}]^T:\textbf{C}:(\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T \cdot (\nabla \otimes [\textbf{N}]^T)^{(132)} - \nabla_{\overline{u}_i} \otimes\overline{u} \cdot \overline{Q}\Bigg) \space dV = \\ =
+         \int_{V^e} \Bigg(\frac{1}{2} \bigg\{ (\nabla \otimes[\textbf{N}]^T)^{(132)} :\textbf{C}: (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T \cdot \nabla \otimes [\textbf{N}]^T \bigg\}^T+ \\
+        + \frac{1}{2} \bigg\{ \nabla \otimes [\textbf{N}]^T:\textbf{C}:(\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T \cdot (\nabla \otimes [\textbf{N}]^T)^{(132)} \bigg\}^T \Bigg) \overline{u}^e - \int_{V^e}\nabla_{\overline{u}_i} \otimes\overline{u} \cdot \overline{Q} \space dV 
     \end{split}
 \end{equation}
-
+Пояснение к (20):  В третьей строке первое слагаемое можно представить так 
+\begin{equation}
+    \begin{split}
+    &(\nabla \otimes[\textbf{N}]^T)^{(132)} :\textbf{C} = \nabla \otimes[\textbf{N}]^T)^{(132)}_{\alpha \beta \gamma}: \textbf{C}_{\beta \gamma \nu \mu} = \mathbb{A}_{\alpha \nu \mu}  \\
+    & (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T \cdot \nabla \otimes [\textbf{N}]^T = (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T_{\nu \beta} \cdot \nabla \otimes [\textbf{N}]^T_{\beta \mu \phi} = \mathbb{B}_{\nu \mu \phi} \\
+    & \overline{u}^e_\alpha \cdot \mathbb{A}_{\alpha \nu \mu} : \mathbb{B}_{\nu \mu \phi} = \overline{u}^e_\alpha \cdot \mathbb{D}_{\alpha \phi} = \mathbb{D}_{\phi \alpha}^T \cdot \overline{u}_\alpha
+    \end{split}
+\end{equation}
+Аналогично для второго слагаемого \par
 Рассмотрим это выражение для узла j:
 \begin{equation}
     \begin{split}
-        \nabla_{\overline{u}_i} \otimes \chi^e_j = \int_{V^e} \Bigg(\frac{1}{2}\bigg\{ \nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T:((\nabla \otimes[\textbf{N}]_j)^T:\textbf{C})^T + \\ 
-        +(\nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T)^T:\textbf{C}:\nabla \otimes [\textbf{N}]_j \cdot \bigg\} \overline{u}^e_j  - \nabla_{\overline{u}_i} \otimes\overline{u}_j \cdot \overline{Q}_j \Bigg)\space dV
+        \nabla_{\overline{u}_i} \otimes \chi^e_j =  \int_{V^e} \Bigg(\frac{1}{2} \bigg\{ (\nabla \otimes[\textbf{N}]_j^T)^{(132)} :\textbf{C}: (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T \cdot \nabla \otimes [\textbf{N}]^T + \\
+        + \nabla \otimes [\textbf{N}]_j^T:\textbf{C}:(\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T \cdot (\nabla \otimes [\textbf{N}]^T)^{(132)} \bigg\}^T \Bigg) \overline{u}^e - \int_{V^e}\nabla_{\overline{u}_i} \otimes\overline{u_j} \cdot \overline{Q_j} \space dV 
     \end{split}
 \end{equation}
 Выражение в фигурных скобках - \textbf{матрица 3x3}. \textcolor{red}{Здесь, возможно, не очевидный момент - i,j = {1,2,3,4} - нумеруют узел в тетраэдральном элементе, это никак не связано с тем, что в скобках матрица. Дело в том, что $\overline{u}$ - 3x1 вектор, поэтому связь между i-м и j-м узлами теперь задается матрицей 3x3. Поэтому в разделе пояснений к коду, (и пояснений к преобразованиям тензоров, (когда они появятся) )при переходе к индексной записи тензоров я использую греческие буквы, чтобы они не пересекались с i и j}
@@ -224,8 +260,8 @@ x_p & y_p & 1 \\
 \end{equation},
 где
 \begin{equation}
-    h_{ij}^e = \frac{1}{2}\int_{V^e} \Bigg\{ \nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T:((\nabla \otimes[\textbf{N}]_j)^T:\textbf{C})^T + \\ 
-        (\nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T)^T:\textbf{C}:\nabla \otimes [\textbf{N}]_j \Bigg\} dV
+    h_{ij}^e = \int_{V^e} \Bigg(\frac{1}{2} \bigg\{ (\nabla \otimes[\textbf{N}]_j^T)^{(132)} :\textbf{C}: (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T \cdot \nabla \otimes [\textbf{N}]^T 
+        + \nabla \otimes [\textbf{N}]_j^T:\textbf{C}:(\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T \cdot (\nabla \otimes [\textbf{N}]^T)^{(132)} \bigg\}^T \Bigg) \overline{u}^e
 \end{equation}
 \begin{equation}
     \overline{F}^e_i = - \int_{V^e}\nabla_{\overline{u}_i} \otimes\overline{u}_j \cdot \overline{Q}_j
@@ -255,7 +291,7 @@ x_p & y_p & 1 \\
 \section{Пояснения к коду plate3d.py}
 Вернемся к страшной формуле для $h_{ij}$ чтобы показать как она выражается в коде. 
 \begin{align}
-& \nabla \otimes [\textbf{N}]_{0\alpha \beta} = \frac{\partial}{\partial x}
+& \nabla \otimes [\textbf{N}]_{\alpha \beta 0} = \frac{\partial}{\partial x}
 \begin{pmatrix}
 N_1 & 0 & 0 & N_2 & 0 & 0 & N_3 & 0 & 0 & N_4 & 0 & 0 \\
 0 & N_1 & 0 & 0 & N_2 & 0 & 0 & N_3 & 0 & 0 & N_4 & 0 \\
@@ -267,7 +303,7 @@ b_1 & 0   & 0   & b_2 & 0   & 0   & b_3 & 0   & 0   & b_4 & 0   & 0 \\
 0   & 0   & b_1 & 0   & 0   & b_2 & 0   & 0   & b_3 & 0   & 0   & b_4\\
 \end{pmatrix}
 \end{align}
-Для $\nabla \otimes [\textbf{N}]_{1\alpha \beta}$ и $\nabla \otimes [\textbf{N}]_{2\alpha \beta}$ соответственно $\frac{\partial}{\partial y}$ и $\frac{\partial}{\partial z}$, в матрице $c_i$ и $d_i $. 
+Для $\nabla \otimes [\textbf{N}]_{\alpha \beta 1}$ и $\nabla \otimes [\textbf{N}]_{\alpha \beta 2}$ соответственно $\frac{\partial}{\partial y}$ и $\frac{\partial}{\partial z}$, в матрице $c_i$ и $d_i $. 
 \begin{align}
 & \nabla_{\overline{u_i}} \otimes \overline{u}^e =\begin{pmatrix}
     \frac{\partial}{\partial u_i} u_1 & \frac{\partial}{\partial u_i} v_1 & \frac{\partial}{\partial u_i} \omega_1 &\frac{\partial}{\partial u_i} u_2 & \frac{\partial}{\partial u_i} v_2 & \frac{\partial}{\partial u_i} \omega_2 &\frac{\partial}{\partial u_i} u_3 & \frac{\partial}{\partial u_i} v_3 & \frac{\partial}{\partial u_i} \omega_3 &\frac{\partial}{\partial u_i} u_4 & \frac{\partial}{\partial u_i} v_4 & \frac{\partial}{\partial u_i} \omega_4 \\
@@ -281,7 +317,7 @@ b_1 & 0   & 0   & b_2 & 0   & 0   & b_3 & 0   & 0   & b_4 & 0   & 0 \\
 
 Поэтому удобнее их воспринимать вместе:
 \begin{equation}
-    \nabla \otimes [\textbf{N}] \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T = \nabla \otimes [\textbf{N}]_{\alpha \beta\gamma} \cdot (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T_{\gamma \zeta} = \textbf{B}_{\alpha \beta \zeta}
+    (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T \cdot \nabla \otimes [\textbf{N}]^T = (\nabla_{\overline{u_i}} \otimes \overline{u}^e)^T_{\alpha \beta} \cdot \nabla \otimes [\textbf{N}]^T_{\beta \gamma \zeta} = \textbf{B}_{\alpha \beta \zeta}
 \end{equation}
 \textcolor{red}{Здесь сидит индекс i - т.к. эта матрица это расписанный $\nabla_{\overline{u}_i} \otimes  \nabla \otimes \overline{u}$}
 \begin{equation}
@@ -306,7 +342,7 @@ d_i & 0   & 0   \\
 \begin{equation}
     (\nabla \otimes[\textbf{N}]_j)_{\alpha \beta \gamma}^T:\textbf{C}_{\beta \gamma \phi \zeta}) = \textbf{A}_{\alpha \phi \zeta}
 \end{equation}
-\textcolor{red}{ Здесь сидит индекс j т.к мы рассмотрели крокодила (15) на узле j}
+\textcolor{red}{ Здесь сидит индекс j т.к мы рассмотрели крокодила (18) на узле j}
 Для матрицы масс: \par
 \begin{align}
     & N_i N_j= \frac{a_i + b_i x + c_i y + d_i z}{6V} \cdot  \frac{a_j + b_j x + c_j y + d_j z}{6V} = \\
