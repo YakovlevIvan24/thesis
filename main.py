@@ -1,10 +1,11 @@
 import matplotlib.pyplot as plt
 
 import plate3d
-from plate3d import generate_from_gmsh_mesh
+
 import gmsh
 import numpy as np
 from scipy import linalg as la
+from scipy.sparse.linalg import cg, gmres
 from collections import Counter
 gmsh.initialize()
 gmsh.open('new_mesh_tet_only.msh')
@@ -37,7 +38,7 @@ msh = Mesh(cells,points, node_tags)
 E = 198*1e9
 G = 77*1e9
 nu = E/2/G-1
-grid = generate_from_gmsh_mesh(msh,1e3,D=None,E=E,nu=nu)
+grid = plate3d.generate_from_gmsh_mesh(msh,7.7e3,D=None,E=E,nu=nu)
 
 grid.ready()
 u_D = grid.get_Dirichlet_nodes()
@@ -56,6 +57,9 @@ omega = 100
 # Почему-то не симметричная
 # assert np.allclose(grid.H[:,:], grid.H[:,:].T, rtol=1e-5, atol=1e-8)
 A = grid.H - omega**2 * grid.M
+u = np.linalg.solve(A,grid.F)
 u = la.solve(A,grid.F)
-
+u, _ = cg(A,grid.F, rtol=1e-6)
+u, _ = gmres(A,grid.F, rtol=1e-6)
+# u = la.inv(A)*grid.F
 print(u)

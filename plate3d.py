@@ -112,36 +112,40 @@ class Grid:
             d_i = -lg.det(np.array([[self.x_0[J], self.y_0[J],1], [self.x_0[M],self.y_0[M],1], [self.x_0[P], self.y_0[P],1]]))
 
             assert not (b_i == 0 and c_i == 0 and d_i == 0)
+            coef_i = [b_i, c_i, d_i]
+            B_i = np.zeros([3,3,3])
+            for l in range(3):
+                B_i[:, :,l] = np.eye(3) * coef_i[l]
 
-            B_1 = np.array([[b_i, 0, 0],  # see eq 1.2.4
-                            [0, b_i, 0],
-                            [0, 0, b_i]])
-            B_2 = np.array([[c_i, 0, 0],
-                            [0, c_i, 0],
-                            [0, 0, c_i]])
-            B_3 = np.array([[d_i, 0, 0],
-                            [0, d_i, 0],
-                            [0, 0, d_i]])
-            B_i = np.array([B_1, B_2, B_3]) # перепроверить
+            coef_i = [b_i, c_i, d_i]
+            B_i_132 = np.zeros([3,3,3])
+            for l in range(3):
+                B_i_132[:, l,:] = np.eye(3) * coef_i[l]
 
             b_j = -lg.det(np.array([[1, self.y_0[M], self.z_0[M]], [1, self.y_0[P],self.z_0[P]], [1, self.y_0[I], self.z_0[I]]]))
             c_j = -lg.det(np.array([[ self.x_0[M],1, self.z_0[M]], [self.x_0[P],1,self.z_0[P]], [self.x_0[I],1, self.z_0[I]]]))
             d_j = -lg.det(np.array([[self.x_0[M], self.y_0[M],1], [self.x_0[P],self.y_0[P],1], [self.x_0[I], self.y_0[I],1]]))
 
             assert not (b_j == 0 and c_j == 0 and d_j == 0)
-            grad_N_j = np.zeros([3,3,3])
-            coef = [b_j, c_j ,d_j]
+            grad_N_T_j = np.zeros([3,3,3])
+            coef_j = [b_j, c_j ,d_j]
             for l in range(3):
-                grad_N_j[l, :,:] = np.eye(3) * coef[l]
+                grad_N_T_j[:, :,l] = np.eye(3) * coef_j[l]
 
-            A_j1 = np.tensordot(grad_N_j.transpose(), elem.D, axes=2)
-            A_j2 = np.tensordot(elem.D, grad_N_j, axes=2)
+
+            grad_N_T_132_j = np.zeros([3,3,3])
+            for l in range(3):
+                grad_N_T_132_j[:, l,:] = np.eye(3) * coef_j[l]
+
+            A_j1 = np.tensordot(grad_N_T_132_j, elem.D, axes=2)
+            A_j2 = np.tensordot(grad_N_T_j,elem.D, axes=2)
 
             assert not np.array_equal(B_i, np.zeros([3, 3, 3]))
-            G1 = np.tensordot(B_i,A_j1,axes=2)
-            G2 = np.tensordot(B_i.transpose(),A_j2,axes=2)
+
+            G1 = np.tensordot(A_j1,B_i,axes=2)
+            G2 = np.tensordot(A_j2,B_i_132,axes=2)
             assert not np.array_equal(G1, np.zeros([3,3]))
-            h_e[3*i:3*(i+1),3*j:3*(j+1)] = 1/2 / elem.V * (G1 + G2)
+            h_e[3*i:3*(i+1),3*j:3*(j+1)] = 1/2 / elem.V * (G1.transpose() + G2.transpose())
         return h_e
 
     def get_element_m(self, elem: Element):
@@ -161,12 +165,12 @@ class Grid:
             z -= np.average(z)
 
             # TODO: omg this is so ugly and non-Python, need to find better solution
-            a_i = -lg.det(np.array([[self.x_0[J], self.y_0[J], self.z_0[J]], [self.y_0[M], self.y_0[M], self.z_0[M]], [self.z_0[P], self.y_0[P], self.z_0[P]]]))
+            a_i = lg.det(np.array([[self.x_0[J], self.y_0[J], self.z_0[J]], [self.y_0[M], self.y_0[M], self.z_0[M]], [self.z_0[P], self.y_0[P], self.z_0[P]]]))
             b_i = -lg.det(np.array([[1, self.y_0[J], self.z_0[J]], [1, self.y_0[M],self.z_0[M]], [1, self.y_0[P], self.z_0[P]]]))
             c_i = -lg.det(np.array([[ self.x_0[J],1, self.z_0[J]], [self.x_0[M],1,self.z_0[M]], [self.x_0[P],1, self.z_0[P]]]))
             d_i = -lg.det(np.array([[self.x_0[J], self.y_0[J],1], [self.x_0[M],self.y_0[M],1], [self.x_0[P], self.y_0[P],1]]))
 
-            a_j = -lg.det(np.array([[self.x_0[M], self.y_0[M], self.z_0[M]], [self.y_0[P], self.y_0[P], self.z_0[P]], [self.z_0[I], self.y_0[I], self.z_0[I]]]))
+            a_j = lg.det(np.array([[self.x_0[M], self.y_0[M], self.z_0[M]], [self.y_0[P], self.y_0[P], self.z_0[P]], [self.z_0[I], self.y_0[I], self.z_0[I]]]))
             b_j = -lg.det(np.array([[1, self.y_0[M], self.z_0[M]], [1, self.y_0[P],self.z_0[P]], [1, self.y_0[I], self.z_0[I]]]))
             c_j = -lg.det(np.array([[ self.x_0[M],1, self.z_0[M]], [self.x_0[P],1,self.z_0[P]], [self.x_0[I],1, self.z_0[I]]]))
             d_j = -lg.det(np.array([[self.x_0[M], self.y_0[M],1], [self.x_0[P],self.y_0[P],1], [self.x_0[I], self.y_0[I],1]]))
@@ -197,7 +201,7 @@ class Grid:
             cross_sum = np.sum(np.multiply(cross_sum,cross_coeff))
             direct_sum = np.sum([np.sum(i**2) + np.triu(i[:,None]-i).sum() for i in coords])
             zero_sum = np.sum([coef_i[i]*coords_0[i] for i in range(len(coef_i))]) + np.sum([coef_j[i]*coords_0[i] for i in range(len(coef_j))])
-            m_ij = 1/36 / elem.V * (zero_sum + direct_sum + cross_sum)
+            m_ij = 1/36  * elem.rho / elem.V * (zero_sum + direct_sum + cross_sum)
             m_e[3*i:3*(i+1),3*j:3*(j+1)] = np.eye(3)*m_ij
         return m_e
 
@@ -209,7 +213,7 @@ class Grid:
             p = (i + 3 ) % 4
             I, J, M, P = elem.node_ind[i], elem.node_ind[j], elem.node_ind[m], elem.node_ind[p]  # indices in external massive
 
-            a_i = -lg.det(np.array([[self.x_0[J], self.y_0[J], self.z_0[J]], [self.x_0[J], self.y_0[M],self.z_0[M]], [self.x_0[J], self.y_0[P], self.z_0[P]]]))
+            a_i = lg.det(np.array([[self.x_0[J], self.y_0[J], self.z_0[J]], [self.x_0[J], self.y_0[M],self.z_0[M]], [self.x_0[J], self.y_0[P], self.z_0[P]]]))
             F_e[i:i+3] = -1/6/elem.V*a_i*self.Q
         return F_e
 
@@ -251,9 +255,9 @@ class Grid:
         for i in range(nodes.shape[0]):
             node = int(nodes[i])
             value = values[3*i:3*(i+1)]
-            self.H[3*node:3*(node+1),3*node:3*(node+1)] *= 1e30
-            self.M[3*node:3*(node+1),3*node:3*(node+1)] *= 1e30
-            self.F[3*node:3*(node+1)] = 1e30*value
+            self.H[3*node:3*(node+1),3*node:3*(node+1)] *= 1e42
+            self.M[3*node:3*(node+1),3*node:3*(node+1)] *= 1e42
+            self.F[3*node:3*(node+1)] = 1e42*value
 
         # for node in self.get_Dirichlet_nodes():
         #     node = int(node) # todo переделать
@@ -282,10 +286,10 @@ class Grid:
 
 def get_isotropic_elastic_tensor(E: np.float64, nu: np.float64) -> np.ndarray:
 
-    C0 = E/(1+nu)/(1-2*nu)
-    C = C0 * np.array([ [[[1-nu,nu,nu],[0,0,0],[0,0,0]],[[nu,1-nu,nu],[0,0,0],[0,0,0]], #TODO ПРОВЕРИТЬ
-                            [[nu,nu,1-nu],[0,0,0],[0,0,0]]] ,[[[0,0,0],[1+nu,1+nu,0],[0,0,0]],[[0,0,0],[1+nu,1+nu,0],[0,0,0]],
-                            [[0,0,0],[0,0,1+nu],[1+nu,0,0]]],[[[0,0,0],[0,0,1+nu],[1+nu,0,0]],[[0,0,0],[0,0,0],[0,1+nu,1+nu]],[[0,0,0],[0,0,0],[0,1+nu,1+nu]]],
+    C0 = E / (1. + nu) / (1.0 - 2.0 * nu)
+    C = C0 * np.array([ [[[1.-nu,nu,nu],[0.,0.,0.],[0.,0.,0.]],[[nu,1.-nu,nu],[0.,0.,0.],[0.,0.,0.]], #TODO ПРОВЕРИТЬ
+                            [[nu,nu,1.-nu],[0.,0.,0.],[0.,0.,0.]]] ,[[[0.,0.,0.],[1.+nu,1.+nu,0.],[0.,0.,0.]],[[0.,0.,0.],[1.+nu,1.+nu,0.],[0.,0.,0.]],
+                            [[0.,0.,0.],[0.,0.,1.+nu],[1.+nu,0.,0.]]],[[[0.,0.,0.],[0.,0.,1.+nu],[1.+nu,0.,0,]],[[0.,0.,0.],[0.,0.,0.],[0.,1.+nu,1.+nu]],[[0.,0.,0.],[0.,0.,0.],[0.,1.+nu,1.+nu]]],
                             ])
     return C
 
