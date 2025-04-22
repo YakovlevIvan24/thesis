@@ -47,6 +47,8 @@ class Grid:
         # print(f'Nodes = {n_nodes}')
         self.n_nodes = n_nodes  # number of nodes
         self.node_tags = node_tags
+        self.free_nodes = []
+        self.Dirichlet_nodes = []
         self.a = np.zeros([3 * n_nodes])  # vector of nodal displacements
         self.a_t = np.zeros([3 * n_nodes])  # vector of nodal velocities
         self.a_tt = np.zeros([3 * n_nodes])  # vector of nodal accelerations
@@ -72,6 +74,12 @@ class Grid:
             raise ValueError("Wrong element params:\n" + elem.to_string())
         self.elements.append(elem)
 
+    def get_closest_vertex_index(self, loc: np.ndarray):
+        if loc.shape[0] != 3:
+            raise ValueError(f"loc must be a 2-d numpy ndarray [x, y]. Got {loc}")
+        x, y, z = loc[0], loc[1], loc[2]
+        dist = (self.x_0 - x) ** 2 + (self.y_0 - y) ** 2 + (self.z_0 - z) ** 2
+        return np.argmin(dist)
 
     def clamped_boundary_x(self,x):
         return np.isclose(x[0], 0)
@@ -80,6 +88,8 @@ class Grid:
         x = [self.x_0,self.y_0,self.z_0]
         mask = self.clamped_boundary_x(x)
         masked = np.ma.masked_array(self.node_tags, np.invert(mask))
+        self.Dirichlet_nodes = np.ma.compressed(masked)
+        # self.free_nodes = np.delete(self.node_tags,self.Dirichlet_nodes)
         return np.ma.compressed(masked)
 
 
@@ -106,7 +116,9 @@ class Grid:
             m = (i + 2) % 4
             p = (i + 3 ) % 4
             I, J, M, P = elem.node_ind[i], elem.node_ind[j], elem.node_ind[m], elem.node_ind[p]  # indices in external massive
-            # TODO: omg this is so ugly and non-Python, need to find better solution
+            # if I in self.Dirichlet_nodes or J in self.Dirichlet_nodes:
+            #     continue
+
             b_i = -lg.det(np.array([[1, self.y_0[J], self.z_0[J]], [1, self.y_0[M],self.z_0[M]], [1, self.y_0[P], self.z_0[P]]]))
             c_i = -lg.det(np.array([[ self.x_0[J],1, self.z_0[J]], [self.x_0[M],1,self.z_0[M]], [self.x_0[P],1, self.z_0[P]]]))
             d_i = -lg.det(np.array([[self.x_0[J], self.y_0[J],1], [self.x_0[M],self.y_0[M],1], [self.x_0[P], self.y_0[P],1]]))
@@ -164,7 +176,6 @@ class Grid:
             y -= np.average(y)  # switching to barycenter cords
             z -= np.average(z)
 
-            # TODO: omg this is so ugly and non-Python, need to find better solution
             a_i = lg.det(np.array([[self.x_0[J], self.y_0[J], self.z_0[J]], [self.y_0[M], self.y_0[M], self.z_0[M]], [self.z_0[P], self.y_0[P], self.z_0[P]]]))
             b_i = -lg.det(np.array([[1, self.y_0[J], self.z_0[J]], [1, self.y_0[M],self.z_0[M]], [1, self.y_0[P], self.z_0[P]]]))
             c_i = -lg.det(np.array([[ self.x_0[J],1, self.z_0[J]], [self.x_0[M],1,self.z_0[M]], [self.x_0[P],1, self.z_0[P]]]))
@@ -226,6 +237,9 @@ class Grid:
             for i in range(4):
                 for j in range(4):
                     I, J = elem.node_ind[i], elem.node_ind[j]
+                    if I in self.Dirichlet_nodes or J in self.Dirichlet_nodes:
+                        continue
+
                     self.H[3 * I:3 * (I + 1), 3 * J:3 * (J + 1)] += h_e[3 * i:3 * (i + 1), 3 * j:3 * (j + 1)]
         return
 
@@ -247,32 +261,51 @@ class Grid:
             for i in range(4):
                 for j in range(4):
                     I, J = elem.node_ind[i], elem.node_ind[j]
+                    if I in self.Dirichlet_nodes or J in self.Dirichlet_nodes:
+                        continue
                     self.M[3 * I:3 * (I + 1), 3 * J:3 * (J + 1)] += m_e[3 * i:3 * (i + 1), 3 * j:3 * (j + 1)]
         return
 
 
-    def apply_Dirichlet_boundary(self, nodes:np.ndarray, values:np.ndarray):
-        for i in range(nodes.shape[0]):
-            node = int(nodes[i])
-            value = values[3*i:3*(i+1)]
-            self.H[3*node:3*(node+1),3*node:3*(node+1)] *= 1e42
-            self.M[3*node:3*(node+1),3*node:3*(node+1)] *= 1e42
-            self.F[3*node:3*(node+1)] = 1e42*value
+    def apply_Dirichlet_boundary(self,u_D: dict):
+        # Так предлагается делать в Зинкевиче
+        # for i in range(nodes.shape[0]):
+        #     node = int(nodes[i])
+        #     value = values[3*i:3*(i+1)]
+        #     self.H[3*node:3*(node+1),3*node:3*(node+1)] *= 1e42
+        #     self.M[3*node:3*(node+1),3*node:3*(node+1)] *= 1e42
+        #     self.F[3*node:3*(node+1)] = 1e42*value
 
-        # for node in self.get_Dirichlet_nodes():
-        #     node = int(node) # todo переделать
-        #     self.F[3 * node:3 * (node + 1)] += np.dot(self.H[3 * node:3 * (node + 1)], values[3 * node:3 * (node + 1)])
-        #     self.F[3 * node:3 * (node + 1)] += np.dot(self.M[3 * node:3 * (node + 1)], values[3 * node:3 * (node + 1)])
-        # return
+        # Другой подход
+        for elem in self.elements:
+            elem.D = self.D
+            h_e = self.get_element_h(elem)
+            m_e = self.get_element_m(elem)
+            for i in range(4):
+                for j in range(4):
+                    I, J = elem.node_ind[i], elem.node_ind[j]
+                    if not ((I not in self.Dirichlet_nodes) and (J in self.Dirichlet_nodes)):
+                        continue
+                    self.F[3 * I:3 * (I + 1)] -= np.dot(h_e[3 * i:3 * (i + 1), 3 * j:3 * (j + 1)],u_D[J])
+                    self.F[3 * I:3 * (I + 1)] -= np.dot(m_e[3 * i:3 * (i + 1), 3 * j:3 * (j + 1)],u_D[J])
 
 
+        indices_to_delete = []
+        for node in u_D.keys():
+            base_index = 3 * node
+            indices_to_delete.extend([base_index, base_index + 1, base_index + 2])
 
-    def get_closest_vertex_index(self, loc: np.ndarray):
-        if loc.shape[0] != 3:
-            raise ValueError(f"loc must be a 3-d numpy ndarray [x, y]. Got {loc}")
-        x, y, z = loc[0], loc[1], loc[2]
-        dist = (self.x_0 - x) ** 2 + (self.y_0 - y) ** 2 + (self.z_0 - z) ** 2
-        return np.argmin(dist)
+
+        mask = np.ones(3*self.n_nodes, dtype=bool)
+        mask[indices_to_delete] = False
+
+        # Плохо, но пока так
+        self.H = self.H[mask, :][:, mask]
+        self.M = self.M[mask, :][:, mask]
+        self.F = self.F[mask, :]
+
+        return
+
 
     def ready(self):
         self.set_V()

@@ -40,10 +40,14 @@ G = 77*1e9
 nu = E/2/G-1
 grid = plate3d.generate_from_gmsh_mesh(msh,7.7e3,D=None,E=E,nu=nu)
 
-grid.ready()
 u_D = grid.get_Dirichlet_nodes()
+grid.ready()
 print(f'u_D = {u_D}')
-grid.apply_Dirichlet_boundary(u_D, np.full([3*u_D.shape[0],1],1))
+u_D = dict()
+for i in grid.get_Dirichlet_nodes():
+    u_D[i] = np.ones([3,1])
+
+grid.apply_Dirichlet_boundary(u_D)
 
 
 for i in range(grid.M.shape[0]):
@@ -51,15 +55,33 @@ for i in range(grid.M.shape[0]):
         if np.array_equal(grid.M[i,:],grid.M[j,:]):
             print(f'row {i} = row {j}')
 
-
-omega = 100
+xtest, ytest, ztest = 1e-2, 1e-2, 1e-3
+ind = grid.get_closest_vertex_index(np.array([xtest,ytest,ztest]))
+print(ind)
+# omega = 100
 
 # Почему-то не симметричная
 # assert np.allclose(grid.H[:,:], grid.H[:,:].T, rtol=1e-5, atol=1e-8)
 A = grid.H - omega**2 * grid.M
-u = np.linalg.solve(A,grid.F)
-u = la.solve(A,grid.F)
-u, _ = cg(A,grid.F, rtol=1e-6)
-u, _ = gmres(A,grid.F, rtol=1e-6)
+# u = np.linalg.solve(A,grid.F)
+# u = la.solve(A,grid.F)
+# u, _ = cg(A,grid.F, rtol=1e-6)
+# u, _ = gmres(A,grid.F, rtol=1e-6)
 # u = la.inv(A)*grid.F
-print(u)
+# print(u[ind*3+2 - 3*6]*1e3)
+
+Omega = np.linspace(100,1000,100)
+afc = np.zeros([len(Omega)])
+for i in range(len(Omega)):
+    print(f'omega = {Omega[i]}')
+    A = grid.H - Omega[i]**2 * grid.M
+    # u = la.solve(A, grid.F)
+    u, _ = gmres(A, grid.F, rtol=1e-5)
+    # Это я написал в творческом порыве
+    afc[i] = u[ind*3+2 - 3*6]*1e3
+
+
+plt.plot(Omega,afc)
+plt.savefig('result2.png')
+plt.show()
+# print(u*1e3)
