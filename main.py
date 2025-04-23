@@ -38,7 +38,7 @@ msh = Mesh(cells,points, node_tags)
 E = 198*1e9
 G = 77*1e9
 nu = E/2/G-1
-grid = plate3d.generate_from_gmsh_mesh(msh,7.7e3,D=None,E=E,nu=nu)
+grid = plate3d.generate_from_gmsh_mesh(msh,7.920*1e3,D=None,E=E,nu=nu)
 
 u_D = grid.get_Dirichlet_nodes()
 grid.ready()
@@ -62,7 +62,7 @@ print(ind)
 
 # Почему-то не симметричная
 # assert np.allclose(grid.H[:,:], grid.H[:,:].T, rtol=1e-5, atol=1e-8)
-A = grid.H - omega**2 * grid.M
+# A = grid.H - omega**2 * grid.M
 # u = np.linalg.solve(A,grid.F)
 # u = la.solve(A,grid.F)
 # u, _ = cg(A,grid.F, rtol=1e-6)
@@ -70,18 +70,24 @@ A = grid.H - omega**2 * grid.M
 # u = la.inv(A)*grid.F
 # print(u[ind*3+2 - 3*6]*1e3)
 
-Omega = np.linspace(100,1000,100)
+f = np.linspace(100,900,int(801*2*np.pi))
+# Omega = f * 2*np.pi
+Omega = np.linspace(0,1000,1001)
 afc = np.zeros([len(Omega)])
 for i in range(len(Omega)):
     print(f'omega = {Omega[i]}')
     A = grid.H - Omega[i]**2 * grid.M
-    # u = la.solve(A, grid.F)
-    u, _ = gmres(A, grid.F, rtol=1e-5)
+    u = la.solve(A, grid.F)
+    # u, _ = gmres(A, grid.F, rtol=1e-5)
     # Это я написал в творческом порыве
     afc[i] = u[ind*3+2 - 3*6]*1e3
 
 
 plt.plot(Omega,afc)
-plt.savefig('result2.png')
+plt.yscale('log')
+plt.title('Амплитудно-частотная характеристика')
+plt.ylabel(r'$u_z$, mm')
+plt.xlabel(r'$\omega$,  $s^{-1}$')
+plt.savefig('afc.png')
 plt.show()
 # print(u*1e3)

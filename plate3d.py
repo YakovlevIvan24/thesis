@@ -101,7 +101,7 @@ class Grid:
                               [1.0, self.x_0[j], self.y_0[j],self.z_0[j]],
                               [1.0, self.x_0[m], self.y_0[m],self.z_0[m]],
                               [1.0, self.x_0[p], self.y_0[p],self.z_0[p]]])
-            elem.V = np.linalg.det(delta)
+            elem.V = 1/6*np.linalg.det(delta)
             if elem.V < 0.0:
                 elem.node_ind = elem.node_ind[::-1]  # if for some reason they are in clockwise order instead
                 elem.V *= -1.0  # of counter-clockwise, change order and fix area
@@ -202,6 +202,22 @@ class Grid:
 
                 return sum_sq + sum_cross
 
+            def tetrahedral_direct_sum(a):
+
+                if len(a) != 4:
+                    raise ValueError("Input arrays must have 4 elements (tetrahedron vertices).")
+
+                # Sum of a_i * b_i
+                sum_sq = sum(a[k] * a[k] for k in range(4))
+
+                # Sum of (a_i * b_j + a_j * b_i) for i < j
+                sum_cross = 0
+                for k in range(4):
+                    for m in range(k + 1, 4):
+                        sum_cross += (a[k] * a[m])
+
+                return sum_sq + sum_cross
+
             coords_0 = [1, x[0], y[0], z[0]]
             coords = [x,y,z]
             coef_i = [a_i, b_i, c_i ,d_i]
@@ -210,9 +226,12 @@ class Grid:
             cross_sum = np.array([tetrahedral_bracket_sum(i, j) if not np.array_equal(i, j) else 0 for i in coords for j in coords])
             cross_coeff = np.array([i*j for i in coef_i[1:] for j in coef_j[1:]])
             cross_sum = np.sum(np.multiply(cross_sum,cross_coeff))
-            direct_sum = np.sum([np.sum(i**2) + np.triu(i[:,None]-i).sum() for i in coords])
+
+            direct_sum = np.array([tetrahedral_direct_sum(i) for i in coords])
+            direct_coeff = np.array([coef_i[i] * coef_j[i] for i in range(1,4)])
+            direct_sum = np.sum(np.multiply(direct_sum,direct_coeff))
             zero_sum = np.sum([coef_i[i]*coords_0[i] for i in range(len(coef_i))]) + np.sum([coef_j[i]*coords_0[i] for i in range(len(coef_j))])
-            m_ij = 1/36  * elem.rho / elem.V * (zero_sum + direct_sum + cross_sum)
+            m_ij = 1/36  * elem.rho / elem.V * (zero_sum + direct_sum/10 + cross_sum/20)
             m_e[3*i:3*(i+1),3*j:3*(j+1)] = np.eye(3)*m_ij
         return m_e
 

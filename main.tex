@@ -72,7 +72,7 @@
 
 \textcolor{red}{В Зинкевиче сделано примерно все то же самое но в скалярном случае (стр. 141, стр.469)}
 \begin{figure}[H]
-    \includegraphics[]{Zinkevich2.png}
+    \includegraphics[]{Zinkevich.png}
     \caption{Аналог в Зинкевиче}
     \label{fig:enter-label}
 \end{figure}
@@ -288,6 +288,19 @@ x_p & y_p & 1 \\
 \begin{equation}
     [H]\overline{u} + [M] \ddot{\overline{u}} + \overline{F} = 0
 \end{equation}
+
+\subsection{Граничные условия}
+Если следовать Зинкевичу то для того чтобы учесть границу Дирихле можно:
+\begin{itemize}
+    \item Подставить в матрицы соотвествующие значения и исключить ненужные уравнения, из вектора F - соответствующие компоненты.
+    \item Или умножить диагональные элементы матриц соотвествующие узлам Дирихле на очень большое число а правую часть заменить этим же числом, умноженным на значение перемещения. 
+\end{itemize}
+\textcolor{red}{Я попробовал второй подход - особо ничего не вышло.}
+Поэтому я решил попробовать подход как в исходной статье:
+\begin{equation}
+    \overline{u} = [\textbf{N} \cdot \overline{u}_e + \textbf{N} \cdot \overline{u}_e^D]
+\end{equation}
+где $\overline{u}_e^D$ - перемещение в узлах Дирихле. Тогда к вектору F добавляются матрицы $[H], [M]$, умноженные на значение в граничных узлах. На этом подходе пока остановился, что-то даже насчиталось, графики ниже.
 \section{Пояснения к коду plate3d.py}
 Вернемся к страшной формуле для $h_{ij}$ чтобы показать как она выражается в коде. 
 \begin{align}
@@ -321,23 +334,24 @@ b_1 & 0   & 0   & b_2 & 0   & 0   & b_3 & 0   & 0   & b_4 & 0   & 0 \\
 \end{equation}
 \textcolor{red}{Здесь сидит индекс i - т.к. эта матрица это расписанный $\nabla_{\overline{u}_i} \otimes  \nabla \otimes \overline{u}$}
 \begin{equation}
-    \textbf{B}_{0\beta \zeta} = 
+    \textbf{B}_{\beta \zeta 0} = 
 \begin{pmatrix}
 b_i & 0   & 0   \\
 0   & b_i & 0   \\
 0   & 0   & b_i \\
-\end{pmatrix},  \textbf{B}_{1\beta \zeta} = 
+\end{pmatrix},  \textbf{B}_{\beta \zeta 1} = 
 \begin{pmatrix}
 c_i & 0   & 0   \\
 0   & c_i & 0   \\
 0   & 0   & c_i \\
-\end{pmatrix}, \textbf{B}_{2\beta\zeta} = 
+\end{pmatrix}, \textbf{B}_{\beta\zeta 2} = 
 \begin{pmatrix}
 d_i & 0   & 0   \\
 0   & d_i & 0   \\
 0   & 0   & d_i \\
 \end{pmatrix}
 \end{equation}
+Это совпадает с $\nabla \otimes [\textbf{N}]^T_j$ если i-е коэффициенты заменить j-ми! \par
 Аналогично для 
 \begin{equation}
     (\nabla \otimes[\textbf{N}]_j)_{\alpha \beta \gamma}^T:\textbf{C}_{\beta \gamma \phi \zeta}) = \textbf{A}_{\alpha \phi \zeta}
@@ -370,6 +384,8 @@ d_i & 0   & 0   \\
     \int xy \space dxdydz =  \frac{V}{20} (\sum_i x_i y_i + \sum_{ij, i<j}( x_i y_j + x_j y_i)) 
 \end{equation}
 \textcolor{red}{Формулы выше расходятся с Зинкевичем из-за перекрестных слагаемых, deepseek утверждает что у Зинкевича формулы для интегрирования по равностороннему треугольнику, я ему верю, закодить эти формулы мне показалось легче, чем закодить преобразование треугольника}
+
+
 \section{Что получилось}
 
 Ищем собственные значения:
@@ -379,6 +395,25 @@ d_i & 0   & 0   \\
 Тут я заходил с двух сторон: \par
 1.Как в Зинкевиче рассмотреть эту систему как задачу на собственные значения и вычислить $\omega$ из уравнения $det([H] - \omega^2 [M]) = 0$ \par
 2. Задать $\omega$ и решить систему $([H] - \omega^2[M])\overline{u} + \overline{F} = 0$. \par
-В обоих случаях пока осмысленного ничего не получил, код пока сильно не дебажил \par
-Проблема, как мне кажется, в том, что в $\textbf{C}$ огромные значения - из-за этого со СЛАУ возникают проблемы.
+Остановился на втором подходе, вот что насчиталось:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\linewidth]{afc.png}
+    \caption{Самая красивая АЧХ}
+    \label{fig:enter-label}
+\end{figure}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.9\linewidth]{afc_edge_test_point.png}
+    \caption{test point на конце, противоположном от закрепленного конца, в остальных случаях она рядом с границей Дирихле}
+    \label{fig:enter-label}
+\end{figure}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.9\linewidth]{afc2500.png}
+    \caption{Большая АЧХ}
+    \label{fig:enter-label}
+\end{figure}
+% \textcolor{red}{Найти с чем сравниться}
 \end{document}
