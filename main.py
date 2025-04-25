@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 
 import plate3d
-
+import os
 import gmsh
 import numpy as np
 from scipy import linalg as la
@@ -45,7 +45,7 @@ grid.ready()
 print(f'u_D = {u_D}')
 u_D = dict()
 for i in grid.get_Dirichlet_nodes():
-    u_D[i] = np.ones([3,1])
+    u_D[i] = np.array([0,0,1e0]).reshape((3,1))
 
 grid.apply_Dirichlet_boundary(u_D)
 
@@ -56,8 +56,8 @@ for i in range(grid.M.shape[0]):
             print(f'row {i} = row {j}')
 
 xtest, ytest, ztest = 1e-2, 1e-2, 1e-3
-ind = grid.get_closest_vertex_index(np.array([xtest,ytest,ztest]))
-print(ind)
+test_ind = grid.get_closest_vertex_index(np.array([xtest,ytest,ztest]))
+test_ind -= next((x[0] for x in enumerate(u_D.keys()) if x[1] > test_ind), len(u_D))
 # omega = 100
 
 # Почему-то не симметричная
@@ -75,16 +75,18 @@ f = np.linspace(100,900,int(801*2*np.pi))
 Omega = np.linspace(0,1000,1001)
 afc = np.zeros([len(Omega)])
 for i in range(len(Omega)):
-    print(f'omega = {Omega[i]}')
+    # os.system('clear')
+    # print(f'omega = {Omega[i]}')
     A = grid.H - Omega[i]**2 * grid.M
     u = la.solve(A, grid.F)
     # u, _ = gmres(A, grid.F, rtol=1e-5)
     # Это я написал в творческом порыве
-    afc[i] = u[ind*3+2 - 3*6]*1e3
+    afc[i] = np.abs(u[test_ind*3+2])
 
 
 plt.plot(Omega,afc)
 plt.yscale('log')
+# plt.ylim((0,1e3))
 plt.title('Амплитудно-частотная характеристика')
 plt.ylabel(r'$u_z$, mm')
 plt.xlabel(r'$\omega$,  $s^{-1}$')
