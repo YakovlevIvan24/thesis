@@ -110,8 +110,8 @@ class Grid:
                 raise ValueError('V == 0')
 
     def get_element_A(self, elem: Element):
-        A_1 = np.zeros([12, 12, 3])
-        A_2 = np.zeros([12, 12, 3])
+        # A_1 = np.zeros([12, 12, 3])
+        # A_2 = np.zeros([12, 12, 3])
         grad_N_T = np.zeros([12, 3, 3])
         grad_N_T_132 = np.zeros([12, 3, 3])
         for i in range(4):
@@ -161,8 +161,8 @@ class Grid:
             # G2 = np.tensordot(A_2,B_i_132,axes=2)
             # assert not np.array_equal(G1, np.zeros([3,3]))
             # h_e[3*i:3*(i+1),3*j:3*(j+1)] = 1/2 / elem.V * (G1.transpose() + G2.transpose())
-            A_1 = np.tensordot(grad_N_T_132, elem.D, axes=2)
-            A_2 = np.tensordot(grad_N_T, elem.D, axes=2)
+        A_1 = np.tensordot(grad_N_T_132, elem.D, axes=2)
+        A_2 = np.tensordot(grad_N_T, elem.D, axes=2)
 
         return A_1, A_2
 
@@ -196,78 +196,10 @@ class Grid:
 
     def get_element_m(self, elem: Element):
         m_e = np.zeros([12,12])
+        K_0 = 1/120*np.array([[2,1,1,1],[1,2,1,1],[1,1,2,1],[1,1,1,2]])
         for i in range(4):
             for j in range(4):
-
-                m = (j + 1) % 4
-                p = (j + 2 ) % 4
-                I, J, M, P = elem.node_ind[i], elem.node_ind[j], elem.node_ind[m], elem.node_ind[p]  # indices in external massive
-
-                x = np.array([self.x_0[I], self.x_0[J], self.x_0[M], self.x_0[P]]) # ?
-                y = np.array([self.y_0[I], self.y_0[J], self.y_0[M], self.y_0[P]])
-                z = np.array([self.z_0[I], self.z_0[J], self.z_0[M], self.z_0[P]])
-                x -= np.average(x)
-                y -= np.average(y)  # switching to barycenter cords
-                z -= np.average(z)
-
-                a_i = lg.det(np.array([[self.x_0[J], self.y_0[J], self.z_0[J]], [self.y_0[M], self.y_0[M], self.z_0[M]], [self.z_0[P], self.y_0[P], self.z_0[P]]]))
-                b_i = -lg.det(np.array([[1, self.y_0[J], self.z_0[J]], [1, self.y_0[M],self.z_0[M]], [1, self.y_0[P], self.z_0[P]]]))
-                c_i = -lg.det(np.array([[ self.x_0[J],1, self.z_0[J]], [self.x_0[M],1,self.z_0[M]], [self.x_0[P],1, self.z_0[P]]]))
-                d_i = -lg.det(np.array([[self.x_0[J], self.y_0[J],1], [self.x_0[M],self.y_0[M],1], [self.x_0[P], self.y_0[P],1]]))
-
-                a_j = lg.det(np.array([[self.x_0[M], self.y_0[M], self.z_0[M]], [self.y_0[P], self.y_0[P], self.z_0[P]], [self.z_0[I], self.y_0[I], self.z_0[I]]]))
-                b_j = -lg.det(np.array([[1, self.y_0[M], self.z_0[M]], [1, self.y_0[P],self.z_0[P]], [1, self.y_0[I], self.z_0[I]]]))
-                c_j = -lg.det(np.array([[ self.x_0[M],1, self.z_0[M]], [self.x_0[P],1,self.z_0[P]], [self.x_0[I],1, self.z_0[I]]]))
-                d_j = -lg.det(np.array([[self.x_0[M], self.y_0[M],1], [self.x_0[P],self.y_0[P],1], [self.x_0[I], self.y_0[I],1]]))
-
-                def tetrahedral_bracket_sum(a, b):
-
-                    if len(a) != 4 or len(b) != 4:
-                        raise ValueError("Input arrays must have 4 elements (tetrahedron vertices).")
-
-                    # Sum of a_i * b_i
-                    sum_sq = sum(a[k] * b[k] for k in range(4))
-
-                    # Sum of (a_i * b_j + a_j * b_i) for i < j
-                    sum_cross = 0
-                    for k in range(4):
-                        for m in range(k + 1, 4):
-                            sum_cross += (a[k] * b[m] + a[m] * b[k])
-
-                    return sum_sq + sum_cross
-
-                def tetrahedral_direct_sum(a):
-
-                    if len(a) != 4:
-                        raise ValueError("Input arrays must have 4 elements (tetrahedron vertices).")
-
-                    # Sum of a_i * b_i
-                    sum_sq = sum(a[k] * a[k] for k in range(4))
-
-                    # Sum of (a_i * b_j + a_j * b_i) for i < j
-                    sum_cross = 0
-                    for k in range(4):
-                        for m in range(k + 1, 4):
-                            sum_cross += (a[k] * a[m])
-
-                    return sum_sq + sum_cross
-
-                coords_0 = [1, np.average(x), np.average(y), np.average(z)]
-                coords = [x,y,z]
-                coef_i = [a_i, b_i, c_i ,d_i]
-                coef_j = [a_j, b_j, c_j, d_j]
-                #todo переписать и проверить коэффициенты
-                cross_sum = np.array([tetrahedral_bracket_sum(i, j) if not np.array_equal(i, j) else 0 for i in coords for j in coords])
-                cross_coeff = np.array([i * j + j * i for i in coef_i[1:] for j in coef_j[1:]])
-                cross_sum = np.sum(np.multiply(cross_sum,cross_coeff))
-
-                direct_sum = np.array([tetrahedral_direct_sum(i) for i in coords])
-                direct_coeff = np.array([coef_i[i] * coef_j[i] for i in range(1,4)])
-                direct_sum = np.sum(np.multiply(direct_sum,direct_coeff))
-                zero_sum = np.sum([coef_i[i]*coords_0[i] for i in range(len(coef_i))]) * np.sum([coef_j[i]*coords_0[i] for i in range(len(coef_j))])
-                # zero_sum = 0
-                m_ij = 1/36  * elem.rho / elem.V * (zero_sum + direct_sum/10 + cross_sum/20) #todo Разбораться с матрицей масс + или * чем дальше элемент тем больше интеграл?????
-                m_ij = elem.V/10 if i == j else elem.V/ 20 #TODO  все тлен - почему не учитываются j=i? как они заполняются
+                m_ij = 1/6/elem.V  * K_0[i,j]
                 m_e[3*i:3*(i+1),3*j:3*(j+1)] = np.eye(3)*m_ij
         return m_e
 
@@ -278,7 +210,7 @@ class Grid:
             m = (i + 2) % 4
             p = (i + 3 ) % 4
             I, J, M, P = elem.node_ind[i], elem.node_ind[j], elem.node_ind[m], elem.node_ind[p]  # indices in external massive
-
+            # todo Здесь написан бред, но пока Q = 0 это ни на что не влияет
             a_i = lg.det(np.array([[self.x_0[J], self.y_0[J], self.z_0[J]], [self.x_0[J], self.y_0[M],self.z_0[M]], [self.x_0[J], self.y_0[P], self.z_0[P]]]))
             F_e[i:i+3] = -1/6/elem.V*a_i*self.Q
         return F_e
@@ -290,7 +222,7 @@ class Grid:
             elem.D = self.D
             A_1, A_2 = self.get_element_A(elem)
             B_1, B_2 = self.get_element_B(elem)
-            h_e = np.tensordot(A_1,B_1, axes=2).transpose() + np.tensordot(A_2,B_2, axes=2).transpose()
+            h_e = 1/2/36/elem.V*(np.tensordot(A_1,B_1, axes=2).transpose() + np.tensordot(A_2,B_2, axes=2).transpose())
             for i in range(4):
                 for j in range(4):
                     I, J = elem.node_ind[i], elem.node_ind[j]
@@ -347,7 +279,7 @@ class Grid:
             elem.D = self.D
             A_1, A_2 = self.get_element_A(elem)
             B_1, B_2 = self.get_element_B(elem)
-            h_e = np.tensordot(A_1,B_1, axes=2).transpose() + np.tensordot(A_1,B_1, axes=2).transpose()
+            h_e = 1/2/36/elem.V*(np.tensordot(A_1,B_1, axes=2).transpose() + np.tensordot(A_2,B_2, axes=2).transpose())
             m_e = self.get_element_m(elem)
             for i in range(4):
                 for j in range(4):
