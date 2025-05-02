@@ -197,9 +197,23 @@ class Grid:
     def get_element_m(self, elem: Element):
         m_e = np.zeros([12,12])
         K_0 = 1/120*np.array([[2,1,1,1],[1,2,1,1],[1,1,2,1],[1,1,1,2]])
+        B = np.zeros([3,3])
+        for elem in self.elements:
+            for i in range(3):
+               j = (i + 1) % 4
+               m = (i + 2) % 4
+               p = (i + 3) % 4
+               I, J, M, P = elem.node_ind[i], elem.node_ind[j], elem.node_ind[m], elem.node_ind[p]
+               b_i = -lg.det(np.array(
+                   [[1, self.y_0[J], self.z_0[J]], [1, self.y_0[M], self.z_0[M]], [1, self.y_0[P], self.z_0[P]]]))
+               c_i = -lg.det(np.array(
+                   [[self.x_0[J], 1, self.z_0[J]], [self.x_0[M], 1, self.z_0[M]], [self.x_0[P], 1, self.z_0[P]]]))
+               d_i = -lg.det(np.array(
+                   [[self.x_0[J], self.y_0[J], 1], [self.x_0[M], self.y_0[M], 1], [self.x_0[P], self.y_0[P], 1]]))
+               B[i,:] = [b_i,c_i,d_i]
         for i in range(4):
             for j in range(4):
-                m_ij = 1/6/elem.V  * K_0[i,j]
+                m_ij =elem.rho / 36 / elem.V**2 * np.linalg.det(B)  * K_0[i,j]
                 m_e[3*i:3*(i+1),3*j:3*(j+1)] = np.eye(3)*m_ij
         return m_e
 
@@ -260,19 +274,25 @@ class Grid:
         # Так предлагается делать в Зинкевиче - сиистема разваливается
         # for node in u_D.keys():
         #     value = u_D[node]
-        #     self.H[3*node:3*(node+1),3*node:3*(node+1)] *= 1e42
-        #     self.M[3*node:3*(node+1),3*node:3*(node+1)] *= 1e42
-        #     self.F[3*node:3*(node+1)] = 1e42*value
+        #     norm_H = np.mean(np.abs(self.H))
+        #     norm_M = np.mean(self.H)
+        #     norm_F = np.mean(self.H)
+        #     self.H[3*node:3*(node+1),3*node:3*(node+1)] *= norm_H
+        #     self.M[3*node:3*(node+1),3*node:3*(node+1)] *= norm_H
+        #     self.F[3*node:3*(node+1)] = norm_H*value
 
         # Так вообще матрица сингулярная
         # for node in u_D.keys():
+        #     norm_H = np.max(np.abs(self.H))
+        #     norm_M = np.max(np.abs(self.M))
+        #
         #     self.H[3*node:3*(node+1),:] = np.full_like(self.H[3*node:3*(node+1),:] ,0)
         #     self.H[:,3 * node:3 * (node + 1)] = np.full_like(self.H[:,3*node:3*(node+1)] ,0)
         #     self.M[3 * node:3 * (node + 1):] = np.full_like(self.M[3*node:3*(node+1),:] ,0)
         #     self.M[:,3 * node:3 * (node + 1)] = np.full_like(self.M[:,3*node:3*(node+1)] ,0)
-        #     self.H[3 * node:3 * (node + 1), 3 * node:3 * (node + 1)] = np.eye(3,3) * 1e42
-        #     self.M[3 * node:3 * (node + 1), 3 * node:3 * (node + 1)] = np.eye(3,3) * 1e42
-        #     self.F[3 * node:3 * (node + 1)] = u_D[node] * 1e42
+        #     self.H[3 * node:3 * (node + 1), 3 * node:3 * (node + 1)] = np.eye(3,3) * norm_H
+        #     self.M[3 * node:3 * (node + 1), 3 * node:3 * (node + 1)] = np.eye(3,3) * norm_M
+        #     self.F[3 * node:3 * (node + 1)] = u_D[node] * (norm_H + norm_M)
 
 
         for elem in self.elements:
