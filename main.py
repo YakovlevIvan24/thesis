@@ -52,8 +52,8 @@ grid.apply_Dirichlet_boundary(u_D)
 
 for i in range(grid.M.shape[0]):
     for j in range(i+1,grid.M.shape[0]):
-        if np.array_equal(grid.M[i,:],grid.M[j,:]):
-            print(f'row {i} = row {j}')
+        if np.array_equal(grid.H[i,:],grid.H[j,:]):
+            print(f'{i}{j}')
 
 xtest, ytest, ztest = 1e-2, 1e-2, 1e-3
 test_ind = grid.get_closest_vertex_index(np.array([xtest,ytest,ztest]))
@@ -61,7 +61,7 @@ test_ind -= next((x[0] for x in enumerate(u_D.keys()) if x[1] > test_ind), len(u
 # omega = 100
 
 # Почему-то не симметричная
-# assert np.allclose(grid.H[:,:], grid.H[:,:].T, rtol=1e-5, atol=1e-8)
+# assert np.allclose(grid.H[:,:], grid.H[:,:].T)
 # A = grid.H - omega**2 * grid.M
 # u = np.linalg.solve(A,grid.F)
 # u = la.solve(A,grid.F)
