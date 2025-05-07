@@ -55,7 +55,7 @@ for i in range(grid.M.shape[0]):
         if np.array_equal(grid.H[i,:],grid.H[j,:]):
             print(f'{i}{j}')
 
-xtest, ytest, ztest = 1e-2, 1e-2, 1e-3
+xtest, ytest, ztest = 11e-2, 1e-2, 1e-3
 test_ind = grid.get_closest_vertex_index(np.array([xtest,ytest,ztest]))
 test_ind -= next((x[0] for x in enumerate(u_D.keys()) if x[1] > test_ind), len(u_D))
 # omega = 100

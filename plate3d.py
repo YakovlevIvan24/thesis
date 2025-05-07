@@ -102,6 +102,7 @@ class Grid:
                               [1.0, self.x_0[m], self.y_0[m],self.z_0[m]],
                               [1.0, self.x_0[p], self.y_0[p],self.z_0[p]]])
             elem.V = 1/6*np.linalg.det(delta)
+            assert elem.V != 0
             if elem.V < 0.0:
                 elem.node_ind = elem.node_ind[::-1]  # if for some reason they are in clockwise order instead
                 elem.V *= -1.0  # of counter-clockwise, change order and fix area
@@ -114,42 +115,55 @@ class Grid:
         # A_2 = np.zeros([12, 12, 3])
         grad_N_231 = np.zeros([12, 3, 3])
         grad_N_213 = np.zeros([12, 3, 3])
+        grad_N = np.zeros([3, 12, 3])
         for i in range(4):
             j = (i + 1) % 4
             m = (i + 2) % 4
             p = (i + 3) % 4
-            I, J, M, P = elem.node_ind[i], elem.node_ind[j], elem.node_ind[m], elem.node_ind[
-                p]  # indices in external massive
+            I, J, M, P = elem.node_ind[i], elem.node_ind[j], elem.node_ind[m], elem.node_ind[p]  # indices in external massive
             # if I in self.Dirichlet_nodes or J in self.Dirichlet_nodes:
             #     continue
 
-            x = np.array([self.x_0[I], self.x_0[J], self.x_0[M], self.x_0[P]]) # ?
-            y = np.array([self.y_0[I], self.y_0[J], self.y_0[M], self.y_0[P]])
-            z = np.array([self.z_0[I], self.z_0[J], self.z_0[M], self.z_0[P]])
-            x -= np.average(x)
-            y -= np.average(y)  # switching to barycenter cords
-            z -= np.average(z)
-            b_i = -lg.det(np.array([[1, y[1], z[1]], [1, y[2],z[2]], [1, y[3], z[3]]]))
-            c_i = -lg.det(np.array([[ x[1],1, z[1]], [x[2],1,z[2]], [x[3],1, z[3]]]))
-            d_i = -lg.det(np.array([[x[1], y[1],1], [x[2],y[2],1], [x[3], y[3],1]]))
+            # x = np.array([self.x_0[I], self.x_0[J], self.x_0[M], self.x_0[P]]) # ?
+            # y = np.array([self.y_0[I], self.y_0[J], self.y_0[M], self.y_0[P]])
+            # z = np.array([self.z_0[I], self.z_0[J], self.z_0[M], self.z_0[P]])
+            # x -= np.average(x)
+            # y -= np.average(y)  # switching to barycenter cords
+            # z -= np.average(z)
+            # b_i = -lg.det(np.array([[1, y[1], z[1]], [1, y[2],z[2]], [1, y[3], z[3]]]))
+            # c_i = -lg.det(np.array([[ x[1],1, z[1]], [x[2],1,z[2]], [x[3],1, z[3]]]))
+            # d_i = -lg.det(np.array([[x[1], y[1],1], [x[2],y[2],1], [x[3], y[3],1]]))
 
-            # b_i = -lg.det(
-            #     np.array([[1, self.y_0[J], self.z_0[J]], [1, self.y_0[M], self.z_0[M]], [1, self.y_0[P], self.z_0[P]]]))
-            # c_i = -lg.det(
-            #     np.array([[self.x_0[J], 1, self.z_0[J]], [self.x_0[M], 1, self.z_0[M]], [self.x_0[P], 1, self.z_0[P]]]))
-            # d_i = -lg.det(
-            #     np.array([[self.x_0[J], self.y_0[J], 1], [self.x_0[M], self.y_0[M], 1], [self.x_0[P], self.y_0[P], 1]]))
+            b_i = -lg.det(
+                np.array([[1, self.y_0[J], self.z_0[J]], [1, self.y_0[M], self.z_0[M]], [1, self.y_0[P], self.z_0[P]]]))
+            c_i = -lg.det(
+                np.array([[self.x_0[J], 1, self.z_0[J]], [self.x_0[M], 1, self.z_0[M]], [self.x_0[P], 1, self.z_0[P]]]))
+            d_i = -lg.det(
+                np.array([[self.x_0[J], self.y_0[J], 1], [self.x_0[M], self.y_0[M], 1], [self.x_0[P], self.y_0[P], 1]]))
 
             # assert not (b_i == 0 and c_i == 0 and d_i == 0)
-            coef = [b_i, c_i, d_i]
-
+            coef = [b_i/elem.V/6, c_i/elem.V/6, d_i/elem.V/6]
             coef = [-1, -1 , -1, 1, 0, 0, 0, 1, 0, 0, 0, 1]
-            # coef_j = [b_j, c_j ,d_j]
             for l in range(3):
-                grad_N_213[3 * i:3 * (i + 1), :, l] = np.eye(3) * coef[l + 3*i]
-
-            for l in range(3):
-                grad_N_231[3 * i:3 * (i + 1), l, :] = np.eye(3) * coef[l + 3*i]
+                grad_N[:, 3 * i:3 * (i + 1), l] = np.eye(3) * coef[l + 3*i]
+        I,J,M,P = elem.node_ind
+        B = np.array([[self.x_0[J]-self.x_0[I], self.y_0[J]-self.y_0[I],self.z_0[J]-self.z_0[I]],
+                    [self.x_0[M]-self.x_0[I], self.y_0[M]-self.y_0[I],self.z_0[M]-self.z_0[I]],
+                    [self.x_0[P]-self.x_0[I], self.y_0[P]-self.y_0[I],self.z_0[P]]-self.z_0[I]])
+        B = B.transpose()
+        # coef_j = [b_j, c_j ,d_j]
+        # print(f'{i},{j},{m},{p}')
+        # print(f'{I},{J},{M},{P}')
+        # print(np.linalg.det(B))
+        # print(B)
+        m = np.linalg.inv(B)
+        grad_N = np.tensordot(np.linalg.inv(B).transpose(), grad_N,axes=1)
+            # for l in range(3):
+                # grad_N_213[3 * i:3 * (i + 1), :, l] = np.eye(3) * coef[l]
+        grad_N_213 = np.transpose(grad_N, (1,0,2))
+            # for l in range(3):
+            #     grad_N_231[3 * i:3 * (i + 1), l, :] = np.eye(3) * coef[l]
+        grad_N_231 = np.transpose(grad_N, (1,2,0))
 
             # grad_N_T_132_j = grad_N_T_j
             # assert not np.array_equal(B_i, np.zeros([3, 3, 3]))
@@ -158,14 +172,15 @@ class Grid:
             # G2 = np.tensordot(A_2,B_i_132,axes=2)
             # assert not np.array_equal(G1, np.zeros([3,3]))
             # h_e[3*i:3*(i+1),3*j:3*(j+1)] = 1/2 / elem.V * (G1.transpose() + G2.transpose())
-        A_1 = 1/2 * 6 *elem.V*np.tensordot(grad_N_231, elem.D, axes=2)
-        A_2 = 1/2 * 6 *elem.V*np.tensordot(grad_N_213, elem.D, axes=2)
+        A_1 = 1/2 * elem.V**1 * np.tensordot(grad_N_231, elem.D, axes=2)
+        A_2 = 1/2 * elem.V**1 * np.tensordot(grad_N_213, elem.D, axes=2)
 
         return A_1, A_2
 
     def get_element_B(self, elem: Element):
         B_132 = np.zeros([3,3,12])
         B_312 = np.zeros([3, 3, 12])
+        grad_N = np.zeros([3, 12, 3])
         for i in range(4):
             j = (i + 1) % 4
             m = (i + 2) % 4
@@ -173,31 +188,47 @@ class Grid:
             I, J, M, P = elem.node_ind[i], elem.node_ind[j], elem.node_ind[m], elem.node_ind[p]  # indices in external massive
             # if I in self.Dirichlet_nodes or J in self.Dirichlet_nodes:
             #     continue
-            x = np.array([self.x_0[I], self.x_0[J], self.x_0[M], self.x_0[P]]) # ?
-            y = np.array([self.y_0[I], self.y_0[J], self.y_0[M], self.y_0[P]])
-            z = np.array([self.z_0[I], self.z_0[J], self.z_0[M], self.z_0[P]])
-            x -= np.average(x)
-            y -= np.average(y)  # switching to barycenter cords
-            z -= np.average(z)
-            b_i = -lg.det(np.array([[1, y[1], z[1]], [1, y[2],z[2]], [1, y[3], z[3]]]))
-            c_i = -lg.det(np.array([[ x[1],1, z[1]], [x[2],1,z[2]], [x[3],1, z[3]]]))
-            d_i = -lg.det(np.array([[x[1], y[1],1], [x[2],y[2],1], [x[3], y[3],1]]))
+            # x = np.array([self.x_0[I], self.x_0[J], self.x_0[M], self.x_0[P]]) # ?
+            # y = np.array([self.y_0[I], self.y_0[J], self.y_0[M], self.y_0[P]])
+            # z = np.array([self.z_0[I], self.z_0[J], self.z_0[M], self.z_0[P]])
+            # x -= np.average(x)
+            # y -= np.average(y)  # switching to barycenter cords
+            # z -= np.average(z)
+            # b_i = -lg.det(np.array([[1, y[1], z[1]], [1, y[2],z[2]], [1, y[3], z[3]]]))
+            # c_i = -lg.det(np.array([[ x[1],1, z[1]], [x[2],1,z[2]], [x[3],1, z[3]]]))
+            # d_i = -lg.det(np.array([[x[1], y[1],1], [x[2],y[2],1], [x[3], y[3],1]]))
 
-            # b_i = -lg.det(
-            #     np.array([[1, self.y_0[J], self.z_0[J]], [1, self.y_0[M], self.z_0[M]], [1, self.y_0[P], self.z_0[P]]]))
-            # c_i = -lg.det(
-            #     np.array([[self.x_0[J], 1, self.z_0[J]], [self.x_0[M], 1, self.z_0[M]], [self.x_0[P], 1, self.z_0[P]]]))
-            # d_i = -lg.det(
-            #     np.array([[self.x_0[J], self.y_0[J], 1], [self.x_0[M], self.y_0[M], 1], [self.x_0[P], self.y_0[P], 1]]))
+            b_i = -lg.det(
+                np.array([[1, self.y_0[J], self.z_0[J]], [1, self.y_0[M], self.z_0[M]], [1, self.y_0[P], self.z_0[P]]]))
+            c_i = -lg.det(
+                np.array([[self.x_0[J], 1, self.z_0[J]], [self.x_0[M], 1, self.z_0[M]], [self.x_0[P], 1, self.z_0[P]]]))
+            d_i = -lg.det(
+                np.array([[self.x_0[J], self.y_0[J], 1], [self.x_0[M], self.y_0[M], 1], [self.x_0[P], self.y_0[P], 1]]))
             # assert not (b_i == 0 and c_i == 0 and d_i == 0)
-            coef = [b_i, c_i, d_i]
-            coef = [-1, -1 , -1, 1, 0, 0, 0, 1, 0, 0, 0, 1]
+            coef = [b_i/elem.V/6, c_i/elem.V/6, d_i/elem.V/6]
+            coef = np.array([-1, -1 , -1, 1, 0, 0, 0, 1, 0, 0, 0, 1])
             for l in range(3):
-                B_312[l, :,3*i:3*(i+1)] = np.eye(3) * coef[l + i*3]
+                grad_N[:, 3 * i:3 * (i + 1), l] = np.eye(3) * coef[l + 3*i]
+                # B_132[:, l,3*i:3*(i+1)] = np.eye(3) * coef[l]
+                # B_312[l, :,3*i:3*(i+1)] = np.eye(3) * coef[l + 3*i]
+        I,J,M,P = elem.node_ind
+        B = np.array([[self.x_0[J]-self.x_0[I], self.y_0[J]-self.y_0[I],self.z_0[J]-self.z_0[I]],
+                    [self.x_0[M]-self.x_0[I], self.y_0[M]-self.y_0[I],self.z_0[M]-self.z_0[I]],
+                    [self.x_0[P]-self.x_0[I], self.y_0[P]-self.y_0[I],self.z_0[P]]-self.z_0[I]])
+        B = B.transpose()
+        # for l in range(3):
 
 
-            for l in range(3):
-                B_132[:, l,3*i:3*(i+1)] = np.eye(3) * coef[l + i*3]
+        # for l in range(3):
+
+        grad_N = np.tensordot(np.linalg.inv(B).transpose(), grad_N,axes=1)
+            # for l in range(3):
+                # grad_N_213[3 * i:3 * (i + 1), :, l] = np.eye(3) * coef[l]
+        B_132 = np.transpose(grad_N, (0,2,1))
+            # for l in range(3):
+            #     grad_N_231[3 * i:3 * (i + 1), l, :] = np.eye(3) * coef[l]
+        B_312 = np.transpose(grad_N, (2,0,1))
+
 
         return B_132,B_312
 
@@ -232,11 +263,11 @@ class Grid:
             A_1, A_2 = self.get_element_A(elem)
             B_1, B_2 = self.get_element_B(elem)
             h_e =(np.tensordot(A_1,B_1, axes=2).transpose() + np.tensordot(A_2,B_2, axes=2).transpose())
-            i, j, m, p = elem.node_ind
-            delta = np.array([[1.0, self.x_0[i], self.y_0[i],self.z_0[i]],
-                              [1.0, self.x_0[j], self.y_0[j],self.z_0[j]],
-                              [1.0, self.x_0[m], self.y_0[m],self.z_0[m]],
-                              [1.0, self.x_0[p], self.y_0[p],self.z_0[p]]])
+            # i, j, m, p = elem.node_ind
+            # delta = np.array([[1.0, self.x_0[i], self.y_0[i],self.z_0[i]],
+            #                   [1.0, self.x_0[j], self.y_0[j],self.z_0[j]],
+            #                   [1.0, self.x_0[m], self.y_0[m],self.z_0[m]],
+            #                   [1.0, self.x_0[p], self.y_0[p],self.z_0[p]]])
             # for i in range(3):
                 # h_e[4*i:4*(i+1)] = np.dot(np.dot(np.linalg.inv(delta), np.linalg.inv(delta).transpose()),h_e[4*i:4*(i+1)])
             for i in range(4):
@@ -302,11 +333,11 @@ class Grid:
             A_1, A_2 = self.get_element_A(elem)
             B_1, B_2 = self.get_element_B(elem)
             h_e = (np.tensordot(A_1,B_1, axes=2).transpose() + np.tensordot(A_2,B_2, axes=2).transpose())
-            i, j, m, p = elem.node_ind
-            delta = np.array([[1.0, self.x_0[i], self.y_0[i],self.z_0[i]],
-                              [1.0, self.x_0[j], self.y_0[j],self.z_0[j]],
-                              [1.0, self.x_0[m], self.y_0[m],self.z_0[m]],
-                              [1.0, self.x_0[p], self.y_0[p],self.z_0[p]]])
+            # i, j, m, p = elem.node_ind
+            # delta = np.array([[1.0, self.x_0[i], self.y_0[i],self.z_0[i]],
+            #                   [1.0, self.x_0[j], self.y_0[j],self.z_0[j]],
+            #                   [1.0, self.x_0[m], self.y_0[m],self.z_0[m]],
+            #                   [1.0, self.x_0[p], self.y_0[p],self.z_0[p]]])
             # for i in range(3):
                 # h_e[4*i:4*(i+1)] = np.dot(np.dot(np.linalg.inv(delta), np.linalg.inv(delta).transpose()),h_e[4*i:4*(i+1)])
             m_e = self.get_element_m(elem)
