@@ -1,5 +1,5 @@
 import numpy as np
-
+from collections import defaultdict
 
 class Element:
     """Triangle finite element"""
@@ -31,6 +31,7 @@ class Grid:
     def __init__(self, n_nodes: int, node_tags):
         # возможно node_tags не нужен
         # print(f'Nodes = {n_nodes}')
+        self.reduced_dof_map = {}
         self.n_nodes = n_nodes  # number of nodes
         self.node_tags = node_tags
         self.free_nodes = []
@@ -44,10 +45,10 @@ class Grid:
         self.elements = []  # list of elements, will be filled later
         self.D = [] # elastic moduli tensor
         self.Q = np.zeros([3,1]) # вектор сил
-        self.H = np.zeros([3 * n_nodes, 3 * n_nodes], dtype=np.float64)  # global stiffness matrix
+        self.H = np.zeros([3 * n_nodes, 3 * n_nodes], dtype=np.complex128)  # global stiffness matrix
         self.M = np.zeros([
-            3 * n_nodes, 3 * n_nodes], dtype=np.float64)  # global mass matrix
-        self.F = np.zeros([3 * n_nodes,1])  # load vector
+            3 * n_nodes, 3 * n_nodes], dtype=np.complex128)  # global mass matrix
+        self.F = np.zeros([3 * n_nodes,1], dtype=np.complex128)  # load vector
         self.constrained_vertices = set()
         self.node_groups = {}
         self.element_groups = {}
@@ -87,97 +88,44 @@ class Grid:
                               [1.0, self.x_0[j], self.y_0[j],self.z_0[j]],
                               [1.0, self.x_0[m], self.y_0[m],self.z_0[m]],
                               [1.0, self.x_0[p], self.y_0[p],self.z_0[p]]])
+
             elem.V = 1/6*np.linalg.det(delta)
-            assert elem.V != 0
-            if elem.V < 0.0:
-                elem.node_ind = elem.node_ind[::-1]  # if for some reason they are in clockwise order instead
-                elem.V *= -1.0  # of counter-clockwise, change order and fix area
-            if elem.V == 0:
-                print(f'i,j,m,p = {elem.node_ind} \n delta = {delta}')
-                raise ValueError('V == 0')
+            assert elem.V > 0
 
-    def get_element_A(self, elem: Element):
-        # A_1 = np.zeros([12, 12, 3])
-        # A_2 = np.zeros([12, 12, 3])
-        grad_N_231 = np.zeros([12, 3, 3])
-        grad_N_213 = np.zeros([12, 3, 3])
-        grad_N = np.zeros([3, 12, 3])
+
+    def get_element_h(self, elem: Element):
+        node_ids = elem.node_ind
+        coords = np.array([
+            [1, self.x_0[i], self.y_0[i], self.z_0[i]] for i in node_ids
+        ])
+
+        inv_coords = np.linalg.inv(coords)
+
+        grads = inv_coords[1:, :]  # rows: [b_i; c_i; d_i], cols = nodes
+
+        B = np.zeros((6, 12))
         for i in range(4):
-            j = (i + 1) % 4
-            m = (i + 2) % 4
-            p = (i + 3) % 4
-            I, J, M, P = elem.node_ind[i], elem.node_ind[j], elem.node_ind[m], elem.node_ind[
-                p]  # indices in external massive
+            # I,J,M,P = elem.node_ind
+            # a_i1 = np.linalg.det(np.array([[self.x_0[J], self.y_0[J], self.z_0[J]], [self.x_0[M], self.y_0[M], self.z_0[M]], [self.x_0[P], self.y_0[P], self.z_0[P]]]))/elem.V/6
+            # b_i = -np.linalg.det(
+            #     np.array([[1, self.y_0[J], self.z_0[J]], [1, self.y_0[M], self.z_0[M]], [1, self.y_0[P], self.z_0[P]]]))/elem.V/6
+            # c_i = -np.linalg.det(
+            #     np.array([[self.x_0[J], 1, self.z_0[J]], [self.x_0[M], 1, self.z_0[M]], [self.x_0[P], 1, self.z_0[P]]]))/elem.V/6
+            # d_i = -np.linalg.det(
+            #     np.array([[self.x_0[J], self.y_0[J], 1], [self.x_0[M], self.y_0[M], 1], [self.x_0[P], self.y_0[P], 1]]))/elem.V/6
+            b_i, c_i, d_i = grads[0, i], grads[1, i], grads[2, i]
+            B_i = np.array([
+                [b_i, 0, 0],
+                [0, c_i, 0],
+                [0, 0, d_i],
+                [c_i, b_i, 0],
+                [0, d_i, c_i],
+                [d_i, 0, b_i]
+            ])
+            B[:, 3 * i:3 * (i + 1)] = B_i
 
-            # Сейчас не используется
-            # b_i = -lg.det(
-            #     np.array([[1, self.y_0[J], self.z_0[J]], [1, self.y_0[M], self.z_0[M]], [1, self.y_0[P], self.z_0[P]]]))
-            # c_i = -lg.det(
-            #     np.array([[self.x_0[J], 1, self.z_0[J]], [self.x_0[M], 1, self.z_0[M]], [self.x_0[P], 1, self.z_0[P]]]))
-            # d_i = -lg.det(
-            #     np.array([[self.x_0[J], self.y_0[J], 1], [self.x_0[M], self.y_0[M], 1], [self.x_0[P], self.y_0[P], 1]]))
-
-
-            coef = [-1, -1, -1, 1, 0, 0, 0, 1, 0, 0, 0, 1] # Частные производные от функций формы
-            # Почти vstack
-            for l in range(3):
-                grad_N[:, 3 * i:3 * (i + 1), l] = np.eye(3) * coef[l + 3 * i]
-        I, J, M, P = elem.node_ind
-
-        # Матрица преобразования
-        B = np.array([[self.x_0[J] - self.x_0[I], self.y_0[J] - self.y_0[I], self.z_0[J] - self.z_0[I]],
-                      [self.x_0[M] - self.x_0[I], self.y_0[M] - self.y_0[I], self.z_0[M] - self.z_0[I]],
-                      [self.x_0[P] - self.x_0[I], self.y_0[P] - self.y_0[I], self.z_0[P]] - self.z_0[I]])
-        B = B.transpose()
-
-
-        grad_N = np.tensordot(np.linalg.inv(B).transpose(), grad_N, axes=1)
-        grad_N_213 = np.transpose(grad_N, (1, 0, 2))
-        grad_N_231 = np.transpose(grad_N, (1, 2, 0))
-
-
-        A_1 = 1 / 2 * elem.V ** 1 * np.tensordot(grad_N_231, elem.D, axes=2)
-        A_2 =  1 / 2 * elem.V ** 1 * np.tensordot(grad_N_213, elem.D, axes=2)
-
-        return A_1, A_2
-
-    def get_element_B(self, elem: Element):
-        B_132 = np.zeros([3, 3, 12])
-        B_312 = np.zeros([3, 3, 12])
-        grad_N = np.zeros([3, 12, 3])
-        for i in range(4):
-            j = (i + 1) % 4
-            m = (i + 2) % 4
-            p = (i + 3) % 4
-            I, J, M, P = elem.node_ind[i], elem.node_ind[j], elem.node_ind[m], elem.node_ind[
-                p]  # indices in external massive
-
-            # Сейчас не используется
-            # b_i = -lg.det(
-            #     np.array([[1, self.y_0[J], self.z_0[J]], [1, self.y_0[M], self.z_0[M]], [1, self.y_0[P], self.z_0[P]]]))
-            # c_i = -lg.det(
-            #     np.array([[self.x_0[J], 1, self.z_0[J]], [self.x_0[M], 1, self.z_0[M]], [self.x_0[P], 1, self.z_0[P]]]))
-            # d_i = -lg.det(
-            #     np.array([[self.x_0[J], self.y_0[J], 1], [self.x_0[M], self.y_0[M], 1], [self.x_0[P], self.y_0[P], 1]]))
-
-            coef = np.array([-1, -1, -1, 1, 0, 0, 0, 1, 0, 0, 0, 1]) # Частные производные от функций формы
-            # Почти hstack
-            for l in range(3):
-                grad_N[:, 3 * i:3 * (i + 1), l] = np.eye(3) * coef[l + 3 * i]
-
-        I, J, M, P = elem.node_ind
-        # Матрица преобразования
-        B = np.array([[self.x_0[J] - self.x_0[I], self.y_0[J] - self.y_0[I], self.z_0[J] - self.z_0[I]],
-                      [self.x_0[M] - self.x_0[I], self.y_0[M] - self.y_0[I], self.z_0[M] - self.z_0[I]],
-                      [self.x_0[P] - self.x_0[I], self.y_0[P] - self.y_0[I], self.z_0[P]] - self.z_0[I]])
-        B = B.transpose()
-
-        grad_N = np.tensordot(np.linalg.inv(B).transpose(), grad_N, axes=1)
-        B_132 = np.transpose(grad_N, (0, 2, 1))
-        B_312 = np.transpose(grad_N, (2, 0, 1))
-
-        return B_132, B_312
-
+        h_e = B.T @ elem.D @ B * elem.V /36   # or divide by 36 if you define D accordingly
+        return h_e
 
     def get_element_m(self, elem: Element):
         m_e = np.zeros([12,12])
@@ -204,16 +152,14 @@ class Grid:
 
     def assemble_H(self):
         """"Calculates global stiffness matrix for entire grid; used in both static and dynamic problems"""
+        visited_edges = set()
         for elem in self.elements:
-            elem.D = self.D
-            A_1, A_2 = self.get_element_A(elem)
-            B_1, B_2 = self.get_element_B(elem)
-            h_e =(np.tensordot(A_1,B_1, axes=2).transpose() + np.tensordot(A_2,B_2, axes=2).transpose())
-
+            # elem.D = self.D
+            h_e = self.get_element_h(elem)
+            # h_e =(np.tensordot(A_1,B_1, axes=2).transpose() + np.tensordot(A_2,B_2, axes=2).transpose())
             for i in range(4):
                 for j in range(4):
                     I, J = elem.node_ind[i], elem.node_ind[j]
-
                     self.H[3 * I:3 * (I + 1), 3 * J:3 * (J + 1)] += h_e[3 * i:3 * (i + 1), 3 * j:3 * (j + 1)]
         return
 
@@ -229,52 +175,71 @@ class Grid:
 
 
     def assemble_M(self):
+        visited_edges = set()
         for elem in self.elements:
             elem.D = self.D
             m_e = self.get_element_m(elem)
             for i in range(4):
                 for j in range(4):
                     I, J = elem.node_ind[i], elem.node_ind[j]
-
                     self.M[3 * I:3 * (I + 1), 3 * J:3 * (J + 1)] += m_e[3 * i:3 * (i + 1), 3 * j:3 * (j + 1)]
         return
 
-
-    def apply_Dirichlet_boundary(self,u_D: dict):
-
+    def compute_F(self, omega, u_D:dict):
+        # print('diriclet called')
+        # print(self.Dirichlet_nodes)
+        visited_edges = set()
+        F = self.F.copy()
         for elem in self.elements:
             elem.D = self.D
-            A_1, A_2 = self.get_element_A(elem)
-            B_1, B_2 = self.get_element_B(elem)
-            h_e = (np.tensordot(A_1,B_1, axes=2).transpose() + np.tensordot(A_2,B_2, axes=2).transpose())
-
+            h_e = self.get_element_h(elem)
             m_e = self.get_element_m(elem)
             for i in range(4):
                 for j in range(4):
                     I, J = elem.node_ind[i], elem.node_ind[j]
-                    if not ((I not in self.Dirichlet_nodes) and (J in self.Dirichlet_nodes)):
-                        continue
-                    self.F[3 * I:3 * (I + 1)] -= np.dot(m_e[3 * i:3 * (i + 1), 3 * j:3 * (j + 1)], u_D[J])
-                    self.F[3 * I:3 * (I + 1)] -= np.dot(h_e[3 * i:3 * (i + 1), 3 * j:3 * (j + 1)], u_D[J])
+                    if (I not in self.Dirichlet_nodes) and (J in self.Dirichlet_nodes):
+                        # print(F[3 * I:3 * (I + 1)].shape)
+                        F[3 * I:3 * (I + 1)] -= omega**2 * np.dot(m_e[3 * i:3 * (i + 1), 3 * j:3 * (j + 1)], u_D[J])
+                        F[3 * I:3 * (I + 1)] -= np.dot(h_e[3 * i:3 * (i + 1), 3 * j:3 * (j + 1)], u_D[J])
 
         indices_to_delete = []
         for node in u_D.keys():
             base_index = 3 * node
             indices_to_delete.extend([base_index, base_index + 1, base_index + 2])
 
+        mask = np.ones(3 * self.n_nodes, dtype=bool)
+        mask[indices_to_delete] = False
+        F = F[mask, :]
+        return F
 
-        mask = np.ones(3*self.n_nodes, dtype=bool)
+    def apply_Dirichlet_boundary(self, u_D: dict):
+
+
+        indices_to_delete = []
+        for node in u_D.keys():
+            base_index = 3 * node
+            indices_to_delete.extend([base_index, base_index + 1, base_index + 2])
+
+        mask = np.ones(3 * self.n_nodes, dtype=bool)
         mask[indices_to_delete] = False
 
-        # Плохо, но пока так
+        # Save index map: from global DOF to reduced system DOF
+        # self.reduced_dof_map = {}
+        reduced_index = 0
+        for global_index in range(3 * self.n_nodes):
+            if mask[global_index]:
+                self.reduced_dof_map[global_index] = reduced_index
+                reduced_index += 1
+
+        # Modify system
         self.H = self.H[mask, :][:, mask]
         self.M = self.M[mask, :][:, mask]
-        self.F = self.F[mask, :]
-
-
-        print(f'cond[H] = {np.linalg.cond(self.H)}')
-        print(f'cond[M] = {np.linalg.cond(self.M)}')
-        return
+        # self.F = self.F[mask, :]
+        # print("cond(H):", np.linalg.cond(self.H))
+        # print("cond(M):", np.linalg.cond(self.M))
+        # print("det(H):", np.linalg.det(self.H))
+        # print("det(M):", np.linalg.det(self.M))
+        return self.reduced_dof_map
 
 
     def ready(self):
@@ -289,64 +254,22 @@ class Grid:
 
 def get_isotropic_elastic_tensor(E: np.float64, nu: np.float64) -> np.ndarray:
 
-    # C0 = E / (1. + nu) / (1.0 - 2.0 * nu)
-    # C = C0 * np.array([ [[[1.-nu,nu,nu],[0.,0.,0.],[0.,0.,0.]],[[nu,1.-nu,nu],[0.,0.,0.],[0.,0.,0.]], #TODO ПРОВЕРИТЬ
-    #                         [[nu,nu,1.-nu],[0.,0.,0.],[0.,0.,0.]]] ,[[[0.,0.,0.],[(1.-2*nu)/2,(1.-2*nu)/2,0.],[0.,0.,0.]],[[0.,0.,0.],[(1.-2*nu)/2,(1.-2*nu)/2,0.],[0.,0.,0.]],
-    #                         [[0.,0.,0.],[0.,0.,(1.-2*nu)/2],[(1.-2*nu)/2,0.,0.]]],[[[0.,0.,0.],[0.,0.,(1.-2*nu)/2],[(1.-2*nu)/2,0.,0,]],[[0.,0.,0.],[0.,0.,0.],[0.,(1.-2*nu)/2,(1.-2*nu)/2]],[[0.,0.,0.],[0.,0.,0.],[0.,(1.-2*nu)/2,(1.-2*nu)/2]]],
-    #                         ])
-    lamda = E * nu / ((1 + nu) * (1 - 2 * nu))
-    mu = E / (2 * (1 + nu))
 
-    # Код ниже написал deepseek
-    # Identity tensor (delta_ij)
-    delta = np.eye(3)
+    coeff = E / ((1 + nu) * (1 - 2 * nu))
 
-    # Initialize 4th-rank tensor
-    C = np.zeros((3, 3, 3, 3))
+    M = np.array([
+        [1 - nu, nu, nu, 0, 0, 0],
+        [nu, 1 - nu, nu, 0, 0, 0],
+        [nu, nu, 1 - nu, 0, 0, 0],
+        [0, 0, 0, (1 - 2 * nu) / 2, 0, 0],
+        [0, 0, 0, 0, (1 - 2 * nu) / 2, 0],
+        [0, 0, 0, 0, 0, (1 - 2 * nu) / 2]
+    ])
 
-    for i in range(3):
-        for j in range(3):
-            for k in range(3):
-                for l in range(3):
-                    C[i, j, k, l] = lamda * delta[i, j] * delta[k, l] + mu * (
-                                delta[i, k] * delta[j, l] + delta[i, l] * delta[j, k])
-
-    def check_minor_symmetry(C):
-        for i in range(3):
-            for j in range(3):
-                for k in range(3):
-                    for l in range(3):
-                        if not (np.allclose(C[i, j, k, l], C[j, i, k, l]) and
-                                np.allclose(C[i, j, k, l], C[i, j, l, k])):
-                            return False
-        return True
-
-    print("Minor symmetries valid:", check_minor_symmetry(C))
-
-    def check_minor_symmetry(C):
-        for i in range(3):
-            for j in range(3):
-                for k in range(3):
-                    for l in range(3):
-                        if not (np.allclose(C[i, j, k, l], C[j, i, k, l]) and
-                                np.allclose(C[i, j, k, l], C[i, j, l, k])):
-                            return False
-        return True
-
-    def check_major_symmetry(C):
-        for i in range(3):
-            for j in range(3):
-                for k in range(3):
-                    for l in range(3):
-                        if not np.allclose(C[i, j, k, l], C[k, l, i, j]):
-                            return False
-        return True
-
-    print("Major symmetry valid:", check_major_symmetry(C))
-    print("Minor symmetries valid:", check_minor_symmetry(C))
-
+    C = coeff * M
+    beta = 0.003
     assert np.isclose(C,C.transpose()).all()
-    return C
+    return C*(1+1j*beta)
 
 
 def generate_from_points_and_triangles(node_tags,points:np.ndarray, tetrahedrons:np.ndarray,
@@ -368,9 +291,9 @@ def generate_from_points_and_triangles(node_tags,points:np.ndarray, tetrahedrons
     res = Grid(n_vertex,node_tags)
     res.D = D.copy()
 
-    res.x_0 += points[:, 0]
-    res.y_0 += points[:, 1]
-    res.z_0 += points[:, 2]
+    res.x_0 = points[:, 0]
+    res.y_0 = points[:, 1]
+    res.z_0 = points[:, 2]
 
     for tetrahedron in tetrahedrons:
         tetrahedron = list(map(int, tetrahedron))
